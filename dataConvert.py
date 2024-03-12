@@ -16,12 +16,13 @@ def convert2float():
             float_number = struct.unpack('f', res[i:i+4])[0]
             IR_float.append(float_number)
 
-        yield IR_float
-
-
-def play_IR():
-    for IR_float in convert2float():
         IR_img = np.array(IR_float).reshape(8, 8)
+        yield IR_img
+
+
+def play_IR(fun_prezoom=lambda x: None, fun_afterzoom=lambda x: None, key_handler=lambda x: None):
+    for IR_img in convert2float():
+        fun_prezoom(IR_img) # hook function
         # print(IR_img)
         # IR_img = IR_img / IR_img.max()
 
@@ -29,10 +30,21 @@ def play_IR():
         zoomed_IR_int = np.asarray(zoomed_IR * 6.375, np.uint8)
         heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
 
+        fun_afterzoom(heatmap) # hook function
+
         cv2.imshow('IR_img', heatmap)
 
         key = cv2.waitKey(1)
         if key == ord("q"):
             break
+        else:
+            key_handler(key)
 
-play_IR()
+
+
+
+
+
+
+if __name__ == '__main__':
+    play_IR()
