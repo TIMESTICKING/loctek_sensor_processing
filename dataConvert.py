@@ -26,8 +26,8 @@ def play_IR(fun_prezoom=lambda x: None, fun_afterzoom=lambda x: None, key_handle
         # print(IR_img)
         # IR_img = IR_img / IR_img.max()
 
-        zoomed_IR = zoom(IR_img, (20, 20), order=3).clip(0, 40)
-        zoomed_IR_int = np.asarray(zoomed_IR * 6.375, np.uint8)
+        zoomed_IR = zoom(IR_img, (20, 20), order=3).clip(15, 40)
+        zoomed_IR_int = np.asarray((zoomed_IR - 15) * (255 / 25), np.uint8)
         heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
 
         fun_afterzoom(heatmap) # hook function
