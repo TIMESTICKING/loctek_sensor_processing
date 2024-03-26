@@ -2,8 +2,8 @@ from queue import Queue
 
 class MESSAGE:
 
-    IR:Queue = Queue(40)
-    sonic1:Queue = Queue(40)
+    IR:Queue = Queue(5)
+    sonic1:Queue = Queue(5)
 
 
 class TAG:

@@ -27,6 +27,14 @@ def queue_watchdog():
         time.sleep(0.1)
 
 
+def deal_input():
+    while True:
+        labels = int(input('Specify a scenetype from above ->'))
+        print(labels)
+
+        time.sleep(0.5)
+
+
 def main():
     jobs = [message_classify]
     my_threads = []

@@ -10,6 +10,7 @@ import struct
 import numpy as np
 import time
 from comps.utils import *
+import threading
 
 SCENETYPE = ['a', 'b']
 
@@ -28,13 +29,13 @@ class IRDataCollect:
             print(f'recording now {self.recording}')
 
             if not self.recording and len(self.IR_imgs) > 0:
-                self.save_data()
+                threading.Thread(target=self.save_data).start()
         elif key == 27:
             # esc, to re-save the last round file to another directory
-            self.resave_data()
+            threading.Thread(target=self.resave_data).start()
 
     def resave_data(self):
-        new_scenetype = self._scenetype
+        new_scenetype = self._scenetype()
         new_sceneroot = self.root / pl.Path(new_scenetype)
         os.makedirs(new_sceneroot, exist_ok=True)
         try:
@@ -57,47 +58,43 @@ class IRDataCollect:
     def save_data(self):
         print("Saving data...")
         
+        scenetype = self._scenetype()
+        sceneroot = self.root / pl.Path(scenetype)
+        timestamp = int(time.time())
+        filename = f'{scenetype}_{timestamp}'
+        os.makedirs(sceneroot, exist_ok=True)
 
-        while True:
-            try:
-                scenetype = self._scenetype
-                sceneroot = self.root / pl.Path(scenetype)
-                timestamp = int(time.time())
-                filename = f'{scenetype}_{timestamp}'
-                os.makedirs(sceneroot, exist_ok=True)
+        # save IR_img np.array as mat
+        sio.savemat(f'{sceneroot / filename}.mat',
+                    {'IR_video': np.array(self.IR_imgs)}, appendmat=True)
+        
+        # save preview heatmap videos
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
+        video_writer = cv2.VideoWriter(f'{sceneroot / filename}.mp4', fourcc, 10.0, (160, 160))
+        for hmap in self.heat_imgs:
+            video_writer.write(hmap) 
+        video_writer.release()
 
-                # save IR_img np.array as mat
-                sio.savemat(f'{sceneroot / filename}.mat',
-                            {'IR_video': np.array(self.IR_imgs)}, appendmat=True)
+        # save some parameters to instance
+        self.last_sceneroot = sceneroot
+        self.last_scenetype = scenetype
+        self.last_filename = filename
+
+        # another change for re-saving the files
+        print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
                 
-                # save preview heatmap videos
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
-                video_writer = cv2.VideoWriter(f'{sceneroot / filename}.mp4', fourcc, 10.0, (160, 160))
-                for hmap in self.heat_imgs:
-                    video_writer.write(hmap) 
-                video_writer.release()
+  
 
-                # clear buffer
-                self.heat_imgs = []
-                self.IR_imgs = []
-
-                # save some parameters to instance
-                self.last_sceneroot = sceneroot
-                self.last_scenetype = scenetype
-                self.last_filename = filename
-
-                # another change for re-saving the files
-                print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
-                
-                break
-            except Exception as e:
-                traceback.print_exc()
-    
-
-    @property
     def _scenetype(self):
         print(list(zip(range(1, len(SCENETYPE)+1), SCENETYPE)))
-        labels = int(input('Specify a scenetype from above ->'))
+        labels = int(input('Specify a scenetype from above, 0 to discard ->'))
+        if labels == 0:
+            # clear buffer
+            self.heat_imgs = []
+            self.IR_imgs = []
+            raise Exception('You have discarded the data, now continue...')
+        
+        assert 0 <= labels-1 < len(SCENETYPE), 'label ID out of range!'
         scenetype = SCENETYPE[labels-1]
 
         return scenetype
