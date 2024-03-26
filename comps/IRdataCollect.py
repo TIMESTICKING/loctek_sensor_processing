@@ -115,7 +115,7 @@ class IRDataCollect:
             IR_img = np.array(IR_float).reshape(8, 8)
 
 
-            self.fun_prezoom(IR_img) # hook function
+            self.pre_zoom(IR_img) # hook function
             # print(IR_img)
             # IR_img = IR_img / IR_img.max()
 
@@ -123,7 +123,7 @@ class IRDataCollect:
             zoomed_IR_int = np.asarray((zoomed_IR - 15) * (255 / 25), np.uint8)
             heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
 
-            self.fun_afterzoom(heatmap) # hook function
+            self.after_zoom(heatmap) # hook function
 
             cv2.imshow('IR_img', heatmap)
 
@@ -132,6 +132,8 @@ class IRDataCollect:
                 break
             else:
                 self.key_handler(key)
+        
+        # raise Exception('System terminated by user at "q"')
 
 
 
