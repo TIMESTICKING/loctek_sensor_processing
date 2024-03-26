@@ -1,14 +1,19 @@
-from dataConvert import *
+from main import *
 import scipy.io as sio
 import pathlib as pl
 import traceback
 import cv2
+from scipy.ndimage import zoom
 import os
 import shutil
+import struct
+import numpy as np
+import time
+from comps.utils import *
 
 SCENETYPE = ['a', 'b']
 
-class DataCollect:
+class IRDataCollect:
     def __init__(self) -> None:
         self.IR_imgs = []
         self.heat_imgs = []
@@ -98,6 +103,37 @@ class DataCollect:
         return scenetype
 
 
+    def play_IR(self):
+        while True:
+            IR_raw = MESSAGE.IR.get() # wait for an avaliable item
+
+            # 将字节数组转换为浮点数列表
+            IR_float = []
+            for i in range(0, len(IR_raw), 4):
+                float_number = struct.unpack('f', IR_raw[i:i+4])[0]
+                IR_float.append(float_number)
+            IR_img = np.array(IR_float).reshape(8, 8)
+
+
+            self.fun_prezoom(IR_img) # hook function
+            # print(IR_img)
+            # IR_img = IR_img / IR_img.max()
+
+            zoomed_IR = zoom(IR_img, (20, 20), order=3).clip(15, 40)
+            zoomed_IR_int = np.asarray((zoomed_IR - 15) * (255 / 25), np.uint8)
+            heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
+
+            self.fun_afterzoom(heatmap) # hook function
+
+            cv2.imshow('IR_img', heatmap)
+
+            key = cv2.waitKey(1)
+            if key == ord("q"):
+                break
+            else:
+                self.key_handler(key)
+
+
 
     def pre_zoom(self, IR_img):
         if self.recording:
@@ -109,6 +145,6 @@ class DataCollect:
 
 
 if __name__ == '__main__':
-    my_data_collector = DataCollect()
-    play_IR(my_data_collector.pre_zoom, my_data_collector.after_zoom, my_data_collector.key_handler)
+    my_data_collector = IRDataCollect()
+    my_data_collector.play_IR()
 
