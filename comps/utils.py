@@ -1,9 +1,18 @@
 from queue import Queue
 
-class MESSAGE:
 
+class MESSAGE:
+    KEY = Queue(5)
     IR:Queue = Queue(5)
     sonic1:Queue = Queue(5)
+
+
+class CONTROL:
+    RECORDING = False
+    last_sceneroot = ''
+    last_scenetype = ''
+    last_filename = ''
+
 
 
 class TAG:

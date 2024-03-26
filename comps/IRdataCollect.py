@@ -1,4 +1,3 @@
-from main import *
 import scipy.io as sio
 import pathlib as pl
 import traceback
@@ -9,44 +8,46 @@ import shutil
 import struct
 import numpy as np
 import time
-from comps.utils import *
+from .utils import MESSAGE, CONTROL
 import threading
 
-SCENETYPE = ['a', 'b']
+SCENETYPE = ['sitting', 'standing']
 
 class IRDataCollect:
     def __init__(self) -> None:
         self.IR_imgs = []
         self.heat_imgs = []
-        self.recording = False
+        CONTROL.RECORDING = False
 
         self.root = pl.Path('./data')
 
-    def key_handler(self, key):
-        if key == 32:
-            # space
-            self.recording = not self.recording
-            print(f'recording now {self.recording}')
 
-            if not self.recording and len(self.IR_imgs) > 0:
-                threading.Thread(target=self.save_data).start()
-        elif key == 27:
-            # esc, to re-save the last round file to another directory
-            threading.Thread(target=self.resave_data).start()
+    def async_record_or_pause(self):
+        CONTROL.RECORDING = not CONTROL.RECORDING
+        print(f'recording now {CONTROL.RECORDING}')
 
-    def resave_data(self):
+        if not CONTROL.RECORDING and len(self.IR_imgs) > 0:
+            threading.Thread(target=self._save_data).start()
+
+
+    def async_resave_data(self):
+        threading.Thread(target=self._resave_data).start()
+
+
+
+    def _resave_data(self):
         new_scenetype = self._scenetype()
         new_sceneroot = self.root / pl.Path(new_scenetype)
         os.makedirs(new_sceneroot, exist_ok=True)
         try:
             for ext in ['.mat', '.mp4']:
-                shutil.move(f'{self.last_sceneroot / self.last_filename}{ext}', 
-                            f'{new_sceneroot / self.last_filename}{ext}')
+                shutil.move(f'{CONTROL.last_sceneroot / CONTROL.last_scenetype}{ext}', 
+                            f'{new_sceneroot / CONTROL.last_scenetype}{ext}')
             print("moving file completed!")
 
             # save some parameters to instance
-            self.last_sceneroot = new_sceneroot
-            self.last_scenetype = new_scenetype
+            CONTROL.last_sceneroot = new_sceneroot
+            CONTROL.last_scenetype = new_scenetype
         
             # another change for re-saving the files
             print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
@@ -55,7 +56,7 @@ class IRDataCollect:
             traceback.print_exc()
 
 
-    def save_data(self):
+    def _save_data(self):
         print("Saving data...")
         
         scenetype = self._scenetype()
@@ -75,10 +76,14 @@ class IRDataCollect:
             video_writer.write(hmap) 
         video_writer.release()
 
+        # clear buffer
+        self.heat_imgs = []
+        self.IR_imgs = []
+
         # save some parameters to instance
-        self.last_sceneroot = sceneroot
-        self.last_scenetype = scenetype
-        self.last_filename = filename
+        CONTROL.last_sceneroot = sceneroot
+        CONTROL.last_scenetype = scenetype
+        CONTROL.last_scenetype = filename
 
         # another change for re-saving the files
         print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
@@ -112,7 +117,7 @@ class IRDataCollect:
             IR_img = np.array(IR_float).reshape(8, 8)
 
 
-            self.pre_zoom(IR_img) # hook function
+            self._pre_zoom(IR_img) # hook function
             # print(IR_img)
             # IR_img = IR_img / IR_img.max()
 
@@ -120,7 +125,7 @@ class IRDataCollect:
             zoomed_IR_int = np.asarray((zoomed_IR - 15) * (255 / 25), np.uint8)
             heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
 
-            self.after_zoom(heatmap) # hook function
+            self._after_zoom(heatmap) # hook function
 
             cv2.imshow('IR_img', heatmap)
 
@@ -128,18 +133,18 @@ class IRDataCollect:
             if key == ord("q"):
                 break
             else:
-                self.key_handler(key)
+                MESSAGE.KEY.put(key, timeout=1)
         
         # raise Exception('System terminated by user at "q"')
 
 
 
-    def pre_zoom(self, IR_img):
-        if self.recording:
+    def _pre_zoom(self, IR_img):
+        if CONTROL.RECORDING:
             self.IR_imgs.append(IR_img)
 
-    def after_zoom(self, heat_img):
-        if self.recording:
+    def _after_zoom(self, heat_img):
+        if CONTROL.RECORDING:
             self.heat_imgs.append(heat_img)
 
 

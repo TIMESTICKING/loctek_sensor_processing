@@ -3,8 +3,15 @@ import cv2
 import queue
 from comps.utils import *
 from comps.IRdataCollect import *
+from comps.SonicDataCollect import *
 
 myserial = None
+
+
+class DEVICE:
+    IR_data_collector = IRDataCollect()
+    sonic_device1 = SonicDataCollect(MESSAGE.sonic1, 'sonic1')
+
 
 def message_classify():
     for res in myserial.readData():
@@ -19,29 +26,26 @@ def message_classify():
         except Exception as e:
             traceback.print_exc()
             break
-            
-            
-def queue_watchdog():
+
+
+'''
+This function is called from IRdataCollect.playIR(), because the key is obtained by cv2
+'''
+def key_handler():
     while True:
-        print('IR queue length is: ', MESSAGE.IR.qsize())
-        time.sleep(0.1)
+        key = MESSAGE.KEY.get()
+        if key == 32:
+            # space
+            DEVICE.IR_data_collector.async_record_or_pause()
+        elif key == 27:
+            # esc, to re-save the last round file to another directory
+            DEVICE.IR_data_collector.async_resave_data()
 
-
-def deal_input():
-    while True:
-        labels = int(input('Specify a scenetype from above ->'))
-        print(labels)
-
-        time.sleep(0.5)
 
 
 def main():
-    jobs = [message_classify]
+    jobs = [message_classify, key_handler, DEVICE.sonic_device1.play_sonic]
     my_threads = []
-
-
-    IR_data_collector = IRDataCollect()
-    # jobs.append(IR_data_collector.play_IR)
 
 
     for job in jobs:
@@ -52,7 +56,7 @@ def main():
 
     print(f'System started with {len(jobs)} threads.')
 
-    IR_data_collector.play_IR()
+    DEVICE.IR_data_collector.play_IR()
     # for t in my_threads:
     #     t.join()
 
