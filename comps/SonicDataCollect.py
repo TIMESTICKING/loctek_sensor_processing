@@ -1,4 +1,7 @@
+import csv
+import shutil
 import struct
+import traceback
 from .utils import *
 
 class SonicDataCollect:
@@ -22,8 +25,24 @@ class SonicDataCollect:
                 pass
 
 
+    def resave_data(self, new_scenetype, new_filename, new_sceneroot):
+        try:
+            shutil.move(f'{CONTROL.last_sceneroot / CONTROL.last_filename}.csv', 
+                            f'{new_sceneroot / new_filename}.csv')
+        except Exception as e:
+            traceback.print_exc()
+
+
     def save_data(self, scenetype, filename, sceneroot):
         print(f"Saving {self.name} data...")
 
+        with open(f'{sceneroot / filename}.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(self.distances)
+        
+        self.clear_buffer()
 
+
+    def clear_buffer(self):
+        self.distances = []
 

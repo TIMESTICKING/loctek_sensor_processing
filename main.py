@@ -44,8 +44,11 @@ def key_handler():
                 if args is False:
                     # discard data
                     DEVICE.IR_data_collector.clear_buffer()
+                    DEVICE.sonic_device1.clear_buffer()
                 else:
+
                     DEVICE.IR_data_collector.save_data(*args)
+                    DEVICE.sonic_device1.save_data(*args)
                     # save some parameters to instance
                     CONTROL.update_lastround(args)
                     # another change for re-saving the files
@@ -57,10 +60,13 @@ def key_handler():
             if args is False:
                 # discard data
                 DEVICE.IR_data_collector.clear_buffer()
+                DEVICE.sonic_device1.clear_buffer()
             else:
                 new_filename = CONTROL.last_filename.replace(CONTROL.last_scenetype, args[0])
                 args[1] = new_filename
+
                 DEVICE.IR_data_collector.resave_data(*args)
+                DEVICE.sonic_device1.resave_data(*args)
                 # save some parameters to instance
                 CONTROL.update_lastround(args)
                 # another change for re-saving the files
@@ -84,8 +90,6 @@ def main():
     print(f'System started with {len(jobs)} threads.')
 
     key_handler()
-    # for t in my_threads:
-    #     t.join()
 
 
 if __name__ == '__main__':

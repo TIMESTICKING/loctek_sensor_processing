@@ -19,7 +19,6 @@ class IRDataCollect:
         
 
     def resave_data(self, new_scenetype, new_filename, new_sceneroot):
-        os.makedirs(new_sceneroot, exist_ok=True)
         try:
             for ext in ['.mat', '.mp4']:
                 shutil.move(f'{CONTROL.last_sceneroot / CONTROL.last_filename}{ext}', 
