@@ -11,60 +11,28 @@ import time
 from .utils import MESSAGE, CONTROL
 import threading
 
-SCENETYPE = ['sitting', 'standing']
 
 class IRDataCollect:
     def __init__(self) -> None:
         self.IR_imgs = []
         self.heat_imgs = []
-        CONTROL.RECORDING = False
+        
 
-        self.root = pl.Path('./data')
-
-
-    def async_record_or_pause(self):
-        CONTROL.RECORDING = not CONTROL.RECORDING
-        print(f'recording now {CONTROL.RECORDING}')
-
-        if not CONTROL.RECORDING and len(self.IR_imgs) > 0:
-            threading.Thread(target=self._save_data).start()
-
-
-    def async_resave_data(self):
-        threading.Thread(target=self._resave_data).start()
-
-
-
-    def _resave_data(self):
-        new_scenetype = self._scenetype()
-        new_sceneroot = self.root / pl.Path(new_scenetype)
+    def resave_data(self, new_scenetype, new_filename, new_sceneroot):
         os.makedirs(new_sceneroot, exist_ok=True)
         try:
             for ext in ['.mat', '.mp4']:
-                shutil.move(f'{CONTROL.last_sceneroot / CONTROL.last_scenetype}{ext}', 
-                            f'{new_sceneroot / CONTROL.last_scenetype}{ext}')
+                shutil.move(f'{CONTROL.last_sceneroot / CONTROL.last_filename}{ext}', 
+                            f'{new_sceneroot / new_filename}{ext}')
             print("moving file completed!")
-
-            # save some parameters to instance
-            CONTROL.last_sceneroot = new_sceneroot
-            CONTROL.last_scenetype = new_scenetype
-        
-            # another change for re-saving the files
-            print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
 
         except Exception as e:
             traceback.print_exc()
 
 
-    def _save_data(self):
-        print("Saving data...")
+    def save_data(self, scenetype, filename, sceneroot):
+        print("Saving IR data...")
         
-        scenetype = self._scenetype()
-        sceneroot = self.root / pl.Path(scenetype)
-        timestamp = int(time.time())
-        filename = f'{scenetype}_{timestamp}'
-        os.makedirs(sceneroot, exist_ok=True)
-
         # save IR_img np.array as mat
         sio.savemat(f'{sceneroot / filename}.mat',
                     {'IR_video': np.array(self.IR_imgs)}, appendmat=True)
@@ -76,33 +44,13 @@ class IRDataCollect:
             video_writer.write(hmap) 
         video_writer.release()
 
+        self.clear_buffer()                
+  
+
+    def clear_buffer(self):
         # clear buffer
         self.heat_imgs = []
         self.IR_imgs = []
-
-        # save some parameters to instance
-        CONTROL.last_sceneroot = sceneroot
-        CONTROL.last_scenetype = scenetype
-        CONTROL.last_scenetype = filename
-
-        # another change for re-saving the files
-        print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
-                
-  
-
-    def _scenetype(self):
-        print(list(zip(range(1, len(SCENETYPE)+1), SCENETYPE)))
-        labels = int(input('Specify a scenetype from above, 0 to discard ->'))
-        if labels == 0:
-            # clear buffer
-            self.heat_imgs = []
-            self.IR_imgs = []
-            raise Exception('You have discarded the data, now continue...')
-        
-        assert 0 <= labels-1 < len(SCENETYPE), 'label ID out of range!'
-        scenetype = SCENETYPE[labels-1]
-
-        return scenetype
 
 
     def play_IR(self):
@@ -130,9 +78,7 @@ class IRDataCollect:
             cv2.imshow('IR_img', heatmap)
 
             key = cv2.waitKey(1)
-            if key == ord("q"):
-                break
-            else:
+            if key != -1:
                 MESSAGE.KEY.put(key, timeout=1)
         
         # raise Exception('System terminated by user at "q"')
