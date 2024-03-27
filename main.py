@@ -4,13 +4,14 @@ import queue
 from comps.utils import *
 from comps.IRdataCollect import *
 from comps.SonicDataCollect import *
+from my_socket import server
 
 myserial = None
 
 
 class DEVICE:
     IR_data_collector = IRDataCollect()
-    sonic_device1 = SonicDataCollect(MESSAGE.sonic1, 'sonic1')
+    sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
 
 
 def message_classify():
@@ -77,7 +78,7 @@ def key_handler():
 
 
 def main():
-    jobs = [message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR]
+    jobs = [server.start_server, message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR]
     my_threads = []
 
 
@@ -97,4 +98,5 @@ if __name__ == '__main__':
         myserial = MySerial_2head1tail(b'\xFA', 'COM3', b'\xAF', b'\xFF')
         main()
     except Exception as e:
+        traceback.print_exc()
         myserial.portClose()

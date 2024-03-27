@@ -50,3 +50,7 @@ class TAG:
     SONIC1 = 0x02
     IR = 0x01
 
+
+
+class SOCKET:
+    sonic1 = ['s1', None]

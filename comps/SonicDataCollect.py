@@ -6,7 +6,8 @@ from .utils import *
 
 class SonicDataCollect:
 
-    def __init__(self, queue, name='sonic1') -> None:
+    def __init__(self, queue, socket=None, name='sonic1') -> None:
+        self.socket = socket
         self.queue = queue
         self.name = name
         self.distances = []
@@ -20,9 +21,13 @@ class SonicDataCollect:
                 float_number = struct.unpack('f', sonic_raw)[0]
                 if CONTROL.RECORDING:
                     self.distances.append(float_number)
-                print(f'{self.name} is {float_number}')
+                
+                if self.socket is not None and self.socket[1] is not None:
+                    self.socket[1].sendall(str(float_number).encode())
+                else:
+                    print(f'{self.name} is {float_number}')
             except Exception as e:
-                pass
+                traceback.print_exc()
 
 
     def resave_data(self, new_scenetype, new_filename, new_sceneroot):
