@@ -5,6 +5,7 @@ from comps.utils import *
 from comps.IRdataCollect import *
 from comps.SonicDataCollect import *
 from my_socket import server
+from argparse import ArgumentParser
 
 myserial = None
 
@@ -94,8 +95,17 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
+    parser.add_argument('--serial', type=str, default='COM3')
+
+    args = parser.parse_args()
+
+    SOCKET.SERVER_PORT = args.port
+
+
     try:
-        myserial = MySerial_2head1tail(b'\xFA', 'COM3', b'\xAF', b'\xFF')
+        myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64*4+1, 5])
         main()
     except Exception as e:
         traceback.print_exc()

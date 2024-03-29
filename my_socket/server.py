@@ -27,7 +27,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
 
 def start_server():
-    server_address = ('localhost', 12345)
+    server_address = ('localhost', SOCKET.SERVER_PORT)
     with socketserver.ThreadingTCPServer(server_address, RequestHandler) as server:
         print("Server is running...")
         server.serve_forever()

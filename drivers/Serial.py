@@ -119,7 +119,7 @@ class MySerial_2head1tail(MySerial):
                     # buf += data
                     sta = SM2h2t.findingtail
             elif sta == SM2h2t.findingtail:
-                if data == self.t and (len(buf) == self.length or self.length is None):
+                if data == self.t and (len(buf) in self.length or self.length is None):
                     yield buf
                     read_cnt = 0
                     buf = b''

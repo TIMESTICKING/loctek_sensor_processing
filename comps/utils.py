@@ -53,4 +53,5 @@ class TAG:
 
 
 class SOCKET:
+    SERVER_PORT = 12345
     sonic1 = ['s1', None]

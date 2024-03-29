@@ -12,7 +12,7 @@ def main(args):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     # 连接到服务器
-    client_socket.connect(('localhost', 12345))
+    client_socket.connect(('localhost', args.port))
     client_socket.send(f'shake-{SOCKET.__getattribute__(SOCKET, args.socket_name)[0]}'.encode())
 
     while True:
@@ -29,8 +29,8 @@ def main(args):
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('socket_name', type=str)
+    parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
 
     args = parser.parse_args()
-
 
     main(args)

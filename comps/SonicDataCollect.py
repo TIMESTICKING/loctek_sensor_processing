@@ -24,8 +24,8 @@ class SonicDataCollect:
                 
                 if self.socket is not None and self.socket[1] is not None:
                     self.socket[1].sendall(str(float_number).encode())
-                else:
-                    print(f'{self.name} is {float_number}')
+                # else:
+                #     print(f'{self.name} is {float_number}')
             except Exception as e:
                 traceback.print_exc()
 
