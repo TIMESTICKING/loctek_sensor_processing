@@ -12,7 +12,19 @@ class MESSAGE:
 
 
 class CONTROL:
-    SCENETYPES = ['sitting', 'standing']
+    SCENETYPES = ['low-position-sit'
+                  , 'low-position-stand'
+                , 'low-position-sit2stand'
+                , 'low-positon-stand2sit'
+                , 'low-position-nobody'
+                , 'low-position-passenger'
+                , 'high-position-sit'
+                  , 'high-position-stand'
+                , 'high-position-sit2stand'
+                , 'high-positon-stand2sit'
+                , 'high-position-nobody'
+                , 'high-position-passenger']
+    
     ROOT = pl.Path('./data')
 
     RECORDING = False
@@ -22,7 +34,9 @@ class CONTROL:
 
     @staticmethod
     def get_scenetype():
-        print(list(zip(range(1, len(CONTROL.SCENETYPES)+1), CONTROL.SCENETYPES)))
+        for i, item in enumerate(CONTROL.SCENETYPES):
+            print(i+1, item)
+
         labels = int(input('Specify a scenetype from above, 0 to discard ->'))
         if labels == 0:
             print('You have discarded the data, now continue...')
