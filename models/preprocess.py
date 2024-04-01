@@ -77,5 +77,46 @@ def distance_preprocess(distances):
     return new_array
 
 
+
+def sample_frames(data, num_frames, max_frame_gap=10):
+    """根据帧间最大间隔均匀采集指定数量的帧"""
+    indices = np.linspace(0, len(data) - 1, num_frames, dtype=int)
+    # 检查相邻下标之间的间隔
+    for i in range(1, len(indices)):
+        if indices[i] - indices[i - 1] > max_frame_gap:
+            # 调整下标以保持间隔不超过max_frame_gap
+            offset = (indices[i] - indices[i - 1] - max_frame_gap) // 2
+            indices[i - 1] += offset
+            indices[i] -= offset
+    return data[indices]
+
+
+def prepare_datasets(distance_dataset, IR_dataset, num_distance_frames, num_IR_frames):
+    """准备训练集"""
+    sampled_distance_dataset = [sample_frames(fix_sonic(data), num_distance_frames) for data in distance_dataset]
+    sampled_IR_dataset = [sample_frames(fix_IR(data), num_IR_frames) for data in IR_dataset]
+    return sampled_distance_dataset, sampled_IR_dataset
+
+
+def fix_IR(IR: np.ndarray):
+    return IR.reshape(-1, 64)
+
+def fix_sonic(dis: np.ndarray):
+    return dis.T
+
+
+def make_dataset():
+    distance_dataset, IR_dataset, groudtruth = load_preprocess()
+    # 准备训练集
+    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 8, 4)
+
+    # 打印结果以验证
+    for i in range(5):
+        print(f"Distance dataset {i+1}: {sampled_distance_dataset[i].shape}")
+        print(f"IR dataset {i+1}: {sampled_IR_dataset[i].shape}")
+
+    return sampled_distance_dataset, sampled_IR_dataset, groudtruth
+
+
 if __name__ == '__main__':
-    load_preprocess()
+    make_dataset()
