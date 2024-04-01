@@ -73,6 +73,9 @@ def distance_preprocess(distances):
 
     # print('old distance is ', distances)
     # print('new is ', new_array)
+            
+    # scale
+    new_array[0, :] = new_array[0, :] / 160.0
 
     return new_array
 
