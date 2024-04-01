@@ -15,13 +15,13 @@ class CONTROL:
     SCENETYPES = ['low-position-sit'
                   , 'low-position-stand'
                 , 'low-position-sit2stand'
-                , 'low-positon-stand2sit'
+                , 'low-position-stand2sit'
                 , 'low-position-nobody'
                 , 'low-position-passenger'
                 , 'high-position-sit'
                   , 'high-position-stand'
                 , 'high-position-sit2stand'
-                , 'high-positon-stand2sit'
+                , 'high-position-stand2sit'
                 , 'high-position-nobody'
                 , 'high-position-passenger']
     
