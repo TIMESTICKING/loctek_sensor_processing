@@ -4,7 +4,7 @@ import pandas as pd
 import scipy.io
 import glob
 
-def load_preprocess(data_dir='data', pre_keywords='high-posi*'):
+def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
 
     fs = glob.glob(os.path.join(data_dir, pre_keywords))
     folders = [os.path.basename(folder) for folder in fs]
@@ -109,12 +109,12 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    distance_dataset, IR_dataset, groudtruth = load_preprocess()
+    distance_dataset, IR_dataset, groudtruth = load_preprocess(data_dir='../data')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 8, 4)
+    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 20, 10)
 
     # 打印结果以验证
-    for i in range(5):
+    for i in range(2):
         print(f"Distance dataset {i+1}: {sampled_distance_dataset[i].shape}")
         print(f"IR dataset {i+1}: {sampled_IR_dataset[i].shape}")
 

@@ -3,6 +3,36 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from preprocess import *
+import torch.optim as optim
+
+from torch.utils.data import Dataset, DataLoader
+
+
+FRAME_IR = 4
+FRAME_DISTANCE = 8
+FEATURE_DIM = 4
+LABEL_NUM = 5
+
+
+class CustomDataset(Dataset):
+    def __init__(self, IR_dataset, distance_dataset, ground_truth):
+        self.IR_dataset = IR_dataset
+        self.distance_dataset = distance_dataset
+        self.ground_truth = ground_truth
+
+    def __len__(self):
+        return len(self.IR_dataset)
+
+    def __getitem__(self, idx):
+        IR_data = self.IR_dataset[idx]
+        distance_data = self.distance_dataset[idx]
+        label = self.ground_truth[idx]
+        # 将标签转换为one-hot编码
+        label_one_hot = torch.zeros(LABEL_NUM)
+        label_one_hot[label] = 1
+        return IR_data, distance_data, label_one_hot
+
+
 
 # 转换为PyTorch张量并缩放数据
 def scale_IR(dataset):
@@ -12,9 +42,7 @@ def scale_IR(dataset):
     scaled_tensor = (tensor - min_val) / (max_val - min_val)
     return scaled_tensor, max_val, min_val
 
-FRAME_IR = 4
-FRAME_DISTANCE = 8
-FEATURE_DIM = 4
+
 
 sampled_distance_dataset, sampled_IR_dataset, groudtruth = make_dataset()
 # 示例数据转换
@@ -51,17 +79,45 @@ class MyNetwork(nn.Module):
         final_output = self.mlp3(combined_output)
         return final_output
 
-# 实例化网络并查看输出
-net = MyNetwork()
 
-# 假设我们有一批数据
-batch_ir_data = IR_tensor[:10]  # 10x4x64
-batch_distance_data = distance_tensor[:10]  # 10x8x2
+# 创建数据集和数据加载器
+dataset = CustomDataset(IR_tensor, distance_tensor, groudtruth)
+dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
 
-# 通过网络传递数据
-output = net(batch_ir_data, batch_distance_data)
-print(output.shape)  # 应该是 (10, 1, 5)
+# 实例化网络
+net = MyNetwork().cuda()
 
 
-if __name__ == '__main__':
-    make_dataset()
+# 定义损失函数和优化器
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=0.001)
+
+
+# 训练循环示例
+for epoch in range(1000):
+    running_loss = 0.0
+    for i, (IR_data, distance_data, labels) in enumerate(dataloader, 0):
+        IR_data = IR_data.cuda()
+        distance_data = distance_data.cuda()
+        labels = labels.cuda()
+        # 清零梯度
+        optimizer.zero_grad()
+
+        # 前向传播
+        outputs = net(IR_data, distance_data)
+        # 计算损失
+        loss = criterion(outputs, labels)
+        # 反向传播
+        loss.backward()
+        # 更新权重
+        optimizer.step()
+
+        # 打印统计信息
+        running_loss += loss.cpu().item()
+        if i % 50 == 49:  # 每10个批次打印一次
+            print(f"[{epoch + 1}, {i + 1}] loss: {running_loss / 50:.3f}")
+            running_loss = 0.0
+
+
+# if __name__ == '__main__':
+#     make_dataset()
