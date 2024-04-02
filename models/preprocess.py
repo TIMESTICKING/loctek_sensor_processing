@@ -4,7 +4,7 @@ import pandas as pd
 import scipy.io
 import glob
 
-def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
+def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
     fs = glob.glob(os.path.join(data_dir, pre_keywords))
     folders = [os.path.basename(folder) for folder in fs]
@@ -81,7 +81,7 @@ def distance_preprocess(distances):
 
 
 
-def sample_frames(data, num_frames, max_frame_gap=10):
+def sample_frames_auto(data, num_frames, max_frame_gap=10):
     """根据帧间最大间隔均匀采集指定数量的帧"""
     indices = np.linspace(0, len(data) - 1, num_frames, dtype=int)
     # 检查相邻下标之间的间隔
@@ -94,10 +94,35 @@ def sample_frames(data, num_frames, max_frame_gap=10):
     return data[indices]
 
 
+def sample_frames_fix(data, num_frames, frame_interval=5):
+    """按固定间隔采集指定数量的帧，尽量靠中间取"""
+    total_frames = len(data)
+    start_index = (total_frames - (num_frames - 1) * frame_interval) // 2
+    end_index = start_index + (num_frames - 1) * frame_interval + 1
+
+    if start_index < 0 or end_index > total_frames:
+        raise ValueError("无法按指定间隔采集足够数量的帧")
+
+    indices = [start_index + i * frame_interval for i in range(num_frames)]
+    return data[indices]
+
+
 def prepare_datasets(distance_dataset, IR_dataset, num_distance_frames, num_IR_frames):
     """准备训练集"""
-    sampled_distance_dataset = [sample_frames(fix_sonic(data), num_distance_frames) for data in distance_dataset]
-    sampled_IR_dataset = [sample_frames(fix_IR(data), num_IR_frames) for data in IR_dataset]
+    # sampled_distance_dataset = [sample_frames_auto(fix_sonic(data), num_distance_frames) for data in distance_dataset]
+    # sampled_IR_dataset = [sample_frames_fix(fix_IR(data), num_IR_frames) for data in IR_dataset]
+    sampled_distance_dataset = []
+    sampled_IR_dataset = []
+
+    for distance_data, IR_data in zip(distance_dataset, IR_dataset):
+        try:
+            sampled_distance_data = sample_frames_auto(fix_sonic(distance_data), num_distance_frames)
+            sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames)
+        except Exception as e:
+            continue
+        sampled_distance_dataset.append(sampled_distance_data)
+        sampled_IR_dataset.append(sampled_IR_data)
+
     return sampled_distance_dataset, sampled_IR_dataset
 
 
@@ -111,7 +136,7 @@ def fix_sonic(dis: np.ndarray):
 def make_dataset():
     distance_dataset, IR_dataset, groudtruth = load_preprocess(data_dir='../data')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 20, 10)
+    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 20, 5)
 
     # 打印结果以验证
     for i in range(2):
