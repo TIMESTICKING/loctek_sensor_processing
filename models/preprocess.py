@@ -4,16 +4,29 @@ import pandas as pd
 import scipy.io
 import glob
 
+DATA_TYPE = 'few'
+
 def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
-    fs = glob.glob(os.path.join(data_dir, pre_keywords))
-    folders = [os.path.basename(folder) for folder in fs]
+    if DATA_TYPE == 'all':
+        fs = glob.glob(os.path.join(data_dir, pre_keywords))
+        folders = [os.path.basename(folder) for folder in fs]
+    else:
+        folders = [
+            'low-position-nobody',
+            'low-position-passenger',
+            'low-position-sit',
+            'low-position-stand'
+        ]
 
     # Prepare to collect data and labels
     distance_dataset = []
     IR_dataset = []
     groudtruth = []
-    labels = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
+    if DATA_TYPE == 'all':
+        labels = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
+    else:
+        labels = ['idle', 'sit', 'stand']
 
     # Process each folder
     for folder in folders:
@@ -116,8 +129,8 @@ def prepare_datasets(distance_dataset, IR_dataset, num_distance_frames, num_IR_f
 
     for distance_data, IR_data in zip(distance_dataset, IR_dataset):
         try:
-            sampled_distance_data = sample_frames_auto(fix_sonic(distance_data), num_distance_frames)
-            sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames)
+            sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 5)
+            sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, 3)
         except Exception as e:
             continue
         sampled_distance_dataset.append(sampled_distance_data)
@@ -136,7 +149,7 @@ def fix_sonic(dis: np.ndarray):
 def make_dataset():
     distance_dataset, IR_dataset, groudtruth = load_preprocess(data_dir='../data')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 20, 5)
+    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 5, 9)
 
     # 打印结果以验证
     for i in range(2):
