@@ -4,19 +4,19 @@ import pandas as pd
 import scipy.io
 import glob
 
-DATA_TYPE = 'all'
+DATA_TYPE = 'few'
 
-def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
+def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
 
     if DATA_TYPE == 'all':
         fs = glob.glob(os.path.join(data_dir, pre_keywords))
         folders = [os.path.basename(folder) for folder in fs]
     else:
         folders = [
-            'low-position-nobody',
-            'low-position-passenger',
-            'low-position-sit',
-            'low-position-stand'
+            'high-position-nobody',
+            'high-position-passenger',
+            'high-position-sit',
+            'high-position-stand'
         ]
 
     # Prepare to collect data and labels

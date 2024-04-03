@@ -7,8 +7,8 @@ from preprocess import *
 
 FRAME_IR = 9
 FRAME_DISTANCE = 14
-FEATURE_DIM = 8
-# FEATURE_DIM_SONIC = 8
+FEATURE_DIM_IR = 4
+FEATURE_DIM_SONIC = 24
 LABEL_NUM = 5
 BATCH = 5
 
@@ -20,21 +20,21 @@ class MyMLP(nn.Module):
         self.mlp1 = nn.Sequential(
             nn.Linear(64, 32),
             nn.ReLU(),
-            nn.Linear(32, FEATURE_DIM),
+            nn.Linear(32, FEATURE_DIM_IR),
             nn.ReLU(),
             # nn.Linear(16, FEATURE_DIM),
             # nn.ReLU()
         )
         self.mlp2 = nn.Sequential(
-            nn.Linear(FRAME_DISTANCE*2, 2*FEATURE_DIM),
+            nn.Linear(FRAME_DISTANCE*2, 16),
             nn.ReLU(),
-            nn.Linear(FEATURE_DIM*2, 1*FEATURE_DIM),
+            nn.Linear(16, FEATURE_DIM_SONIC),
             nn.ReLU(),
             # nn.Linear(FEATURE_DIM*2, 1*FEATURE_DIM),
             # nn.ReLU()
         )
         self.mlp3 = nn.Sequential(
-            nn.Linear(1*FEATURE_DIM*(FRAME_IR+1), LABEL_NUM),
+            nn.Linear(FRAME_IR*FEATURE_DIM_IR + FEATURE_DIM_SONIC, LABEL_NUM),
             nn.Softmax(dim=1)
         )
     
@@ -45,9 +45,9 @@ class MyMLP(nn.Module):
         distance_data = distance_data.view(-1, FRAME_DISTANCE*2)
 
         ir_output = self.mlp1(ir_data)
-        ir_output_per_batch = ir_output.view(-1, FRAME_IR*FEATURE_DIM) # 10x16
+        ir_output_per_batch = ir_output.view(-1, FRAME_IR*FEATURE_DIM_IR) # B x (9x4)
 
-        distance_output = self.mlp2(distance_data) # 10x4
+        distance_output = self.mlp2(distance_data) # B x 24
         combined_output = torch.cat((ir_output_per_batch, distance_output), dim=1)
 
         final_output = self.mlp3(combined_output)
