@@ -4,7 +4,7 @@ import pandas as pd
 import scipy.io
 import glob
 
-DATA_TYPE = 'few'
+DATA_TYPE = 'all'
 
 def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
@@ -120,23 +120,25 @@ def sample_frames_fix(data, num_frames, frame_interval=5):
     return data[indices]
 
 
-def prepare_datasets(distance_dataset, IR_dataset, num_distance_frames, num_IR_frames):
+def prepare_datasets(distance_dataset, IR_dataset, groudtruth, num_distance_frames, num_IR_frames):
     """准备训练集"""
     # sampled_distance_dataset = [sample_frames_auto(fix_sonic(data), num_distance_frames) for data in distance_dataset]
     # sampled_IR_dataset = [sample_frames_fix(fix_IR(data), num_IR_frames) for data in IR_dataset]
     sampled_distance_dataset = []
     sampled_IR_dataset = []
+    sampled_gt = []
 
-    for distance_data, IR_data in zip(distance_dataset, IR_dataset):
+    for distance_data, IR_data, gt_data in zip(distance_dataset, IR_dataset, groudtruth):
         try:
-            sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 5)
+            sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 2)
             sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, 3)
         except Exception as e:
             continue
         sampled_distance_dataset.append(sampled_distance_data)
         sampled_IR_dataset.append(sampled_IR_data)
+        sampled_gt.append(gt_data)
 
-    return sampled_distance_dataset, sampled_IR_dataset
+    return sampled_distance_dataset, sampled_IR_dataset, sampled_gt
 
 
 def fix_IR(IR: np.ndarray):
@@ -149,12 +151,13 @@ def fix_sonic(dis: np.ndarray):
 def make_dataset():
     distance_dataset, IR_dataset, groudtruth = load_preprocess(data_dir='../data')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset = prepare_datasets(distance_dataset, IR_dataset, 5, 9)
+    sampled_distance_dataset, sampled_IR_dataset, groudtruth = prepare_datasets(distance_dataset, IR_dataset, groudtruth, 14, 9)
 
     # 打印结果以验证
     for i in range(2):
-        print(f"Distance dataset {i+1}: {sampled_distance_dataset[i].shape}")
-        print(f"IR dataset {i+1}: {sampled_IR_dataset[i].shape}")
+        print(f"Distance dataset {i+1}: {len(sampled_distance_dataset)}, {sampled_distance_dataset[i].shape}")
+        print(f"IR dataset {i+1}: {len(sampled_IR_dataset)}, {sampled_IR_dataset[i].shape}")
+        print(f"gt dataset {i+1}: {len(groudtruth)}")
 
     return sampled_distance_dataset, sampled_IR_dataset, groudtruth
 

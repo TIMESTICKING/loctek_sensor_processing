@@ -6,9 +6,10 @@ from preprocess import *
 
 
 FRAME_IR = 9
-FRAME_DISTANCE = 5
+FRAME_DISTANCE = 14
 FEATURE_DIM = 8
-LABEL_NUM = 3
+# FEATURE_DIM_SONIC = 8
+LABEL_NUM = 5
 BATCH = 5
 
 # 神经网络类
@@ -60,9 +61,9 @@ class MyCNN(MyMLP):
 
         self.mlp1 = nn.Conv2d(in_channels=1, out_channels=4, kernel_size=3)
         # 自动计算全连接层的输入特征数
-        fc_input_dim = self._get_conv_output_dim(8, 8)
+        self.fc_input_dim = self._get_conv_output_dim(8, 8)
         # 全连接层
-        self.fc1 = nn.Linear(fc_input_dim, FEATURE_DIM)
+        self.fc1 = nn.Linear(self.fc_input_dim, FEATURE_DIM)
 
 
     @torch.no_grad()
@@ -74,10 +75,15 @@ class MyCNN(MyMLP):
 
 
     def forward(self, ir_data, distance_data):
-        ir_data = ir_data.view(-1, 8, 8)
+        ir_data = ir_data.view(-1, 8, 8).unsqueeze(1)
         distance_data = distance_data.view(-1, FRAME_DISTANCE*2)
 
-        ir_output = self.fc1(self.mlp1(ir_data))
+        # 卷积层后接ReLU激活函数
+        x = F.relu(self.mlp1(x))
+        # 展平
+        x = x.view(-1, self.fc_input_dim)
+        # 全连接层
+        ir_output = self.fc1(x)
         ir_output_per_batch = ir_output.view(-1, FRAME_IR*FEATURE_DIM) # 10x16
 
         distance_output = self.mlp2(distance_data) # 10x4
