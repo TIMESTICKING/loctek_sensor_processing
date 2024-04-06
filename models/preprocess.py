@@ -7,17 +7,18 @@ import glob
 
 DATA_TYPE = 'all'
 
-def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
+def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
 
     if DATA_TYPE == 'all':
         fs = glob.glob(os.path.join(data_dir, pre_keywords))
         folders = [os.path.basename(folder) for folder in fs]
     else:
+        _pre = pre_keywords.split('-')[0]
         folders = [
-            'high-position-nobody',
-            'high-position-passenger',
-            'high-position-sit',
-            'high-position-stand'
+            f'{_pre}-position-nobody',
+            f'{_pre}-position-passenger',
+            f'{_pre}-position-sit',
+            f'{_pre}-position-stand'
         ]
 
     # Prepare to collect data and labels
