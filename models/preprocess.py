@@ -4,9 +4,10 @@ import pandas as pd
 import scipy.io
 import glob
 
-DATA_TYPE = 'few'
 
-def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
+DATA_TYPE = 'all'
+
+def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
     if DATA_TYPE == 'all':
         fs = glob.glob(os.path.join(data_dir, pre_keywords))
