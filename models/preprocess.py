@@ -7,7 +7,7 @@ import glob
 
 DATA_TYPE = 'all'
 
-def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
+def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
     if DATA_TYPE == 'all':
         fs = glob.glob(os.path.join(data_dir, pre_keywords))
@@ -111,11 +111,14 @@ def sample_frames_auto(data, num_frames, max_frame_gap=10):
     return data[indices]
 
 
-def sample_frames_fix(data, num_frames, frame_interval=5):
+def sample_frames_fix(data, num_frames, offset, frame_interval=5):
     """按固定间隔采集指定数量的帧，尽量靠中间取"""
     total_frames = len(data)
     start_index = (total_frames - (num_frames - 1) * frame_interval) // 2
     end_index = start_index + (num_frames - 1) * frame_interval + 1
+
+    start_index += offset
+    end_index += offset
 
     if start_index < 0 or end_index > total_frames:
         raise ValueError("无法按指定间隔采集足够数量的帧")
@@ -134,15 +137,16 @@ def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
     sampled_filename = []
 
     for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
-        try:
-            sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 2)
-            sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, 3)
-        except Exception as e:
-            continue
-        sampled_distance_dataset.append(sampled_distance_data)
-        sampled_IR_dataset.append(sampled_IR_data)
-        sampled_gt.append(gt_data)
-        sampled_filename.append(filename_data)
+        for offset in [-2, -1, 0, 1, 2]:
+            try:
+                sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
+                sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
+            except Exception as e:
+                continue
+            sampled_distance_dataset.append(sampled_distance_data)
+            sampled_IR_dataset.append(sampled_IR_data)
+            sampled_gt.append(gt_data)
+            sampled_filename.append(f'offset_{offset}|{filename_data}')
 
     return sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename
 
