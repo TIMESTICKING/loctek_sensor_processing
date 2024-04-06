@@ -20,6 +20,7 @@ def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
         ]
 
     # Prepare to collect data and labels
+    filename_dataset = []
     distance_dataset = []
     IR_dataset = []
     groudtruth = []
@@ -53,6 +54,7 @@ def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
                 distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
             if os.path.exists(mat_file):
                 IR_dataset.append(scipy.io.loadmat(mat_file)['IR_video'])
+                filename_dataset.append(f"{folder}_{sample_id}")
             else:
                 pass
 
@@ -63,7 +65,7 @@ def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
     print('IR length is', len(IR_dataset))
     print('gt length is', len(groudtruth))
 
-    return distance_dataset, IR_dataset, groudtruth
+    return distance_dataset, IR_dataset, groudtruth, filename_dataset
 
 
 def distance_preprocess(distances):
@@ -120,15 +122,16 @@ def sample_frames_fix(data, num_frames, frame_interval=5):
     return data[indices]
 
 
-def prepare_datasets(distance_dataset, IR_dataset, groudtruth, num_distance_frames, num_IR_frames):
+def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
     """准备训练集"""
     # sampled_distance_dataset = [sample_frames_auto(fix_sonic(data), num_distance_frames) for data in distance_dataset]
     # sampled_IR_dataset = [sample_frames_fix(fix_IR(data), num_IR_frames) for data in IR_dataset]
     sampled_distance_dataset = []
     sampled_IR_dataset = []
     sampled_gt = []
+    sampled_filename = []
 
-    for distance_data, IR_data, gt_data in zip(distance_dataset, IR_dataset, groudtruth):
+    for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
         try:
             sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 2)
             sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, 3)
@@ -137,8 +140,9 @@ def prepare_datasets(distance_dataset, IR_dataset, groudtruth, num_distance_fram
         sampled_distance_dataset.append(sampled_distance_data)
         sampled_IR_dataset.append(sampled_IR_data)
         sampled_gt.append(gt_data)
+        sampled_filename.append(filename_data)
 
-    return sampled_distance_dataset, sampled_IR_dataset, sampled_gt
+    return sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename
 
 
 def fix_IR(IR: np.ndarray):
@@ -149,17 +153,18 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    distance_dataset, IR_dataset, groudtruth = load_preprocess(data_dir='../data')
+    datasets = load_preprocess(data_dir='../data')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset, groudtruth = prepare_datasets(distance_dataset, IR_dataset, groudtruth, 14, 9)
+    sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset = prepare_datasets(datasets, 14, 9)
 
     # 打印结果以验证
     for i in range(2):
         print(f"Distance dataset {i+1}: {len(sampled_distance_dataset)}, {sampled_distance_dataset[i].shape}")
         print(f"IR dataset {i+1}: {len(sampled_IR_dataset)}, {sampled_IR_dataset[i].shape}")
         print(f"gt dataset {i+1}: {len(groudtruth)}")
+        print(f"filename dataset {i+1}: {len(sampled_filename_dataset)}")
 
-    return sampled_distance_dataset, sampled_IR_dataset, groudtruth
+    return sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset
 
 
 if __name__ == '__main__':
