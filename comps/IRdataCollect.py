@@ -12,9 +12,20 @@ from .utils import MESSAGE, CONTROL
 import threading
 from PyQt6.QtCore import QObject, pyqtSignal
 
+def IR_byte_decoder(IR_raw):
+    IR_float = []
+    for i in range(0, len(IR_raw), 4):
+        float_number = struct.unpack('f', IR_raw[i:i+4])[0]
+        IR_float.append(float_number)
+    IR_img = np.array(IR_float)
+
+    return IR_img
+
 
 class IRDataCollect(QObject):
     new_heatmap_signal = pyqtSignal(np.ndarray)
+
+
     def __init__(self) -> None:
         super().__init__()
         self.IR_imgs = []
@@ -60,12 +71,7 @@ class IRDataCollect(QObject):
             IR_raw = MESSAGE.IR.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
-            IR_float = []
-            for i in range(0, len(IR_raw), 4):
-                float_number = struct.unpack('f', IR_raw[i:i+4])[0]
-                IR_float.append(float_number)
-            IR_img = np.array(IR_float).reshape(8, 8)
-
+            IR_img = IR_byte_decoder(IR_raw).reshape(8, 8)
 
             self._pre_zoom(IR_img) # hook function
             # print(IR_img)
@@ -98,7 +104,6 @@ class IRDataCollect(QObject):
     def _after_zoom(self, heat_img):
         if CONTROL.RECORDING:
             self.heat_imgs.append(heat_img)
-            print("now saving heat_img")
 
 
 if __name__ == '__main__':
