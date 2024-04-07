@@ -12,6 +12,16 @@ from .utils import MESSAGE, CONTROL
 import threading
 
 
+def IR_byte_decoder(IR_raw):
+    IR_float = []
+    for i in range(0, len(IR_raw), 4):
+        float_number = struct.unpack('f', IR_raw[i:i+4])[0]
+        IR_float.append(float_number)
+    IR_img = np.array(IR_float)
+
+    return IR_img
+
+
 class IRDataCollect:
     def __init__(self) -> None:
         self.IR_imgs = []
@@ -57,12 +67,7 @@ class IRDataCollect:
             IR_raw = MESSAGE.IR.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
-            IR_float = []
-            for i in range(0, len(IR_raw), 4):
-                float_number = struct.unpack('f', IR_raw[i:i+4])[0]
-                IR_float.append(float_number)
-            IR_img = np.array(IR_float).reshape(8, 8)
-
+            IR_img = IR_byte_decoder(IR_raw).reshape(8, 8)
 
             self._pre_zoom(IR_img) # hook function
             # print(IR_img)
