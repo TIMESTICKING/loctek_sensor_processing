@@ -126,29 +126,61 @@ def sample_frames_fix(data, num_frames, offset, frame_interval=5):
     indices = [start_index + i * frame_interval for i in range(num_frames)]
     return data[indices]
 
+def Data_Augmentation():
+    pass
 
 def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
     """准备训练集"""
     # sampled_distance_dataset = [sample_frames_auto(fix_sonic(data), num_distance_frames) for data in distance_dataset]
     # sampled_IR_dataset = [sample_frames_fix(fix_IR(data), num_IR_frames) for data in IR_dataset]
+    
+    # train
     sampled_distance_dataset = []
     sampled_IR_dataset = []
     sampled_gt = []
     sampled_filename = []
+    
+    # test
+    sampled_distance_dataset_test = []
+    sampled_IR_dataset_test = []
+    sampled_gt_test = []
+    sampled_filename_test = []
 
+    index = 0
     for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
-        for offset in [-2, -1, 0, 1, 2]:
+        index += 1
+        # 每 5 个取一个数据作为测试集
+        if index % 5 == 0:
+            # 没有偏移
+            offset = 0
             try:
                 sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
                 sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
             except Exception as e:
                 continue
-            sampled_distance_dataset.append(sampled_distance_data)
-            sampled_IR_dataset.append(sampled_IR_data)
-            sampled_gt.append(gt_data)
-            sampled_filename.append(f'offset_{offset}|{filename_data}')
+            sampled_distance_dataset_test.append(sampled_distance_data)
+            sampled_IR_dataset_test.append(sampled_IR_data)
+            sampled_gt_test.append(gt_data)
+            sampled_filename_test.append(f'offset_{offset}|{filename_data}')
+        else: 
+            # 数据增强
+            # 随机偏移: offset
+            # 翻转:
+            # 倒序:
+            # 噪声:
+            for offset in [-2,-1,0,1,2]:# [-2, -1, 0, 1, 2]:
+                try:
+                    sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
+                    sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
+                except Exception as e:
+                    continue
+                sampled_distance_dataset.append(sampled_distance_data)
+                sampled_IR_dataset.append(sampled_IR_data)
+                sampled_gt.append(gt_data)
+                sampled_filename.append(f'offset_{offset}|{filename_data}')
 
-    return sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename
+    return (sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename), \
+        (sampled_distance_dataset_test, sampled_IR_dataset_test, sampled_gt_test, sampled_filename_test)
 
 
 def fix_IR(IR: np.ndarray):
@@ -159,9 +191,11 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    datasets = load_preprocess(data_dir='../data')
+    datasets = load_preprocess(data_dir='./data')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset = prepare_datasets(datasets, 14, 9)
+    (sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset)\
+    ,(sampled_distance_dataset_test, sampled_IR_dataset_test, groudtruth_test, sampled_filename_dataset_test)\
+        = prepare_datasets(datasets, 14, 9)
 
     # 打印结果以验证
     for i in range(2):
@@ -170,7 +204,8 @@ def make_dataset():
         print(f"gt dataset {i+1}: {len(groudtruth)}")
         print(f"filename dataset {i+1}: {len(sampled_filename_dataset)}")
 
-    return sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset
+    return (sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset),\
+    (sampled_distance_dataset_test, sampled_IR_dataset_test, groudtruth_test, sampled_filename_dataset_test)
 
 
 if __name__ == '__main__':
