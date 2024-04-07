@@ -10,13 +10,16 @@ import numpy as np
 import time
 from .utils import MESSAGE, CONTROL
 import threading
+from PyQt6.QtCore import QObject, pyqtSignal
 
 
-class IRDataCollect:
+class IRDataCollect(QObject):
+    new_heatmap_signal = pyqtSignal(np.ndarray)
     def __init__(self) -> None:
+        super().__init__()
         self.IR_imgs = []
         self.heat_imgs = []
-        
+        self.pickinterval = 0
 
     def resave_data(self, new_scenetype, new_filename, new_sceneroot):
         try:
@@ -72,13 +75,13 @@ class IRDataCollect:
             zoomed_IR_int = np.asarray((zoomed_IR - 15) * (255 / 25), np.uint8)
             heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
 
-            self._after_zoom(heatmap) # hook function
+            self._after_zoom(heatmap)   # hook function
+            self.new_heatmap_signal.emit(heatmap)
 
-            cv2.imshow('IR_img', heatmap)
-
-            key = cv2.waitKey(1)
-            if key != -1:
-                MESSAGE.KEY.put(key, timeout=1)
+            #  cv2.imshow('IR_img', heatmap)
+            #  key = cv2.waitKey(1)
+            #  if key != -1:
+            #     MESSAGE.KEY.put(key, timeout=1)
         
         # raise Exception('System terminated by user at "q"')
 
@@ -86,11 +89,16 @@ class IRDataCollect:
 
     def _pre_zoom(self, IR_img):
         if CONTROL.RECORDING:
-            self.IR_imgs.append(IR_img)
+            self.pickinterval = self.pickinterval - 1
+            if self.pickinterval <= 0:
+                self.IR_imgs.append(IR_img)
+                print("now saving IR_img")
+                self.pickinterval = CONTROL.IR_interval
 
     def _after_zoom(self, heat_img):
         if CONTROL.RECORDING:
             self.heat_imgs.append(heat_img)
+            print("now saving heat_img")
 
 
 if __name__ == '__main__':

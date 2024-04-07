@@ -31,6 +31,8 @@ class CONTROL:
     last_sceneroot = ''
     last_scenetype = '' 
     last_filename = ''
+    IR_interval = 0
+    Sonic_interval = 0
 
     @staticmethod
     def get_scenetype():
