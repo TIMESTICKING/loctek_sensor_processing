@@ -12,6 +12,8 @@ FEATURE_DIM_SONIC = 24
 LABEL_NUM = 5
 BATCH = 5
 
+mydevice = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 # 神经网络类
 class MyMLP(nn.Module):
     def __init__(self):
