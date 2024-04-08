@@ -28,6 +28,7 @@ class CONTROL:
     ROOT = pl.Path('./data')
 
     RECORDING = False
+    TESTING = False
     last_sceneroot = ''
     last_scenetype = '' 
     last_filename = ''

@@ -23,10 +23,11 @@ class SonicDataCollect(QObject):
             # 将字节数组转换为浮点数列表
             try:
                 float_number = struct.unpack('f', sonic_raw)[0]
-                if CONTROL.RECORDING:
+                if CONTROL.RECORDING or CONTROL.TESTING:
                     self.pickinterval = self.pickinterval - 1
                     if self.pickinterval <= 0:
                         self.distances.append(float_number)
+                        print('超声增加1帧')
                         self.pickinterval = CONTROL.Sonic_interval
                 if self.socket is not None and self.socket[1] is not None:
                     self.socket[1].sendall(str(float_number).encode())

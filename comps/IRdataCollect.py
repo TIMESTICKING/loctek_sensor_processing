@@ -94,16 +94,17 @@ class IRDataCollect(QObject):
 
 
     def _pre_zoom(self, IR_img):
-        if CONTROL.RECORDING:
+        if CONTROL.RECORDING or CONTROL.TESTING:
             self.pickinterval = self.pickinterval - 1
             if self.pickinterval <= 0:
                 self.IR_imgs.append(IR_img)
-                print("now saving IR_img")
-                self.pickinterval = CONTROL.IR_interval
 
     def _after_zoom(self, heat_img):
-        if CONTROL.RECORDING:
-            self.heat_imgs.append(heat_img)
+        if CONTROL.RECORDING or CONTROL.TESTING:
+            if self.pickinterval <= 0:
+                self.heat_imgs.append(heat_img)
+                print('红外增加1帧')
+                self.pickinterval = CONTROL.IR_interval
 
 
 if __name__ == '__main__':
