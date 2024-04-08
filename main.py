@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from drivers.Serial import *
 import cv2
 import queue
@@ -14,13 +15,17 @@ from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 import serial.tools.list_ports
-import math
+from models.infer import MyInference
+import io
+
 myserial = None
+
 
 
 class DEVICE:
     IR_data_collector = IRDataCollect()
     sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
+    predictor = MyInference()
 
 
 def message_classify():
@@ -84,7 +89,7 @@ def key_handler():
 
 
 def main():
-    jobs = [server.start_server, message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR]
+    jobs = [server.start_server, message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR, DEVICE.predictor.get_action]
     my_threads = []
     for job in jobs:
         t = threading.Thread(target=job,)
@@ -104,16 +109,20 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_show.clicked.connect(self.click_pushButton_show)
         self.ui.pushButton_start.clicked.connect(self.clickpushButton_start)
         self.ui.pushButton_addperson.clicked.connect(self.clickpushButton_add)
+
         self.sonic_data_collector = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
         self.sonic_data_collector.new_dist_signal.connect(self.update_distance_display)
-        self.ui.comboBox_mode.currentTextChanged.connect(self.on_mode_changed)
-        self.ui.spinBox_IInterval.valueChanged.connect(self.on_spinBox_IRChanged)
-        self.ui.spinBox_SInterval.valueChanged.connect(self.on_spinBox_SonicChanged)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.ui.pushButton.clicked.connect(self.click_pushButton1)
-        self.iscomdata = 0
-        self.ir_data_collector = IRDataCollect()
+        self.ir_data_collector = IRDataCollect()        
         self.ir_data_collector.new_heatmap_signal.connect(self.update_heatmap_display)
+        self.predictor_result = MyInference()
+        self.predictor_result.predict_result_signal.connect(self.update_predict_result)
+
+        self.ui.comboBox_mode.currentTextChanged.connect(self.on_mode_changed)
+        self.ui.comboBox_2.currentTextChanged.connect(self.on_tablepos_changed)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.iscomdata = 0
+
+
         SCENETYPEPos=['低位','高位']
         SCENETYPEModes = \
             ['坐姿'
@@ -134,43 +143,27 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.refresh_timer.timeout.connect(self.timer_callback)
         self.refresh_timer.start(500)
         self.issaving = 0
-        self.ui.stackedWidget_Mode.setCurrentIndex(0)
-        self.IRDatas = []
-        self.IRIMGDatas = []
-        self.SONICDatas = []
-        self.picknumber = 0
-        self.isfull = 0
+        self.ui.stackedWidget_Mode.setCurrentIndex(0)      
+        self.ui.comboBox_2.setCurrentIndex(0)         # 默认桌子为低位
+        self.predictor_result.set_table_position(0)     # 默认桌子为低位
+
     def keyPressEvent(self, keyevent):
         if keyevent.key() == Qt.Key.Key_S:
             print("click")
             self.clickpushButton_start()
+    
+    def on_tablepos_changed(self, text):
+        if(text == "高位"):
+            self.predictor_result.set_table_position(1)
+        elif(text == "低位"):
+            self.predictor_result.set_table_position(0)
 
-    def on_spinBox_IRChanged(self):
-        print('红外间隔为:', self.ui.spinBox_IInterval.text())
-        CONTROL.IR_interval = int(self.ui.spinBox_IInterval.text())
-        self.isfull = 0
-        self.IRDatas.clear()
-        self.IRIMGDatas.clear()
-        self.SONICDatas.clear()
-    def on_spinBox_SonicChanged(self):
-        print('超声间隔为:', self.ui.spinBox_SInterval.text())
-        CONTROL.Sonic_interval = int(self.ui.spinBox_SInterval.text())
-        self.isfull = 0
-        self.IRDatas.clear()
-        self.IRIMGDatas.clear()
-        self.SONICDatas.clear()
 
     def on_mode_changed(self, text):
-        self.ui.stackedWidget_Mode.setCurrentIndex(self.ui.comboBox_mode.currentIndex())
-        self.isfull = 0
-        self.IRDatas.clear()
-        self.IRIMGDatas.clear()
-        self.SONICDatas.clear()
+        self.ui.stackedWidget_Mode.setCurrentIndex(self.ui.comboBox_mode.currentIndex())        
         if self.ui.stackedWidget_Mode.currentIndex() == 0:
-            print("# 采集模式")
             CONTROL.TESTING = False
         if self.ui.stackedWidget_Mode.currentIndex() == 1:
-            print("# 推理模式")
             CONTROL.TESTING = True
 
     def timer_callback(self):
@@ -182,63 +175,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.allname = names
 
         if self.ui.stackedWidget_Mode.currentIndex() == 1:  # 推理模式
-            self.showTestResult()
+            pass
 
 
-
-    def showTestResult(self):
-        if len(self.ir_data_collector.IR_imgs) > 0 and len(self.sonic_data_collector.distances) > 0:
-            IRdata = self.ir_data_collector.IR_imgs
-            IRImgdata = self.ir_data_collector.heat_imgs
-            Sonicdata = self.sonic_data_collector.distances
-
-            if self.isfull == 1:
-                self.IRDatas = self.IRDatas[(len(self.IRDatas)//6):]
-                self.IRIMGDatas = self.IRIMGDatas[(len(self.IRIMGDatas)//6):]
-                self.SONICDatas = self.SONICDatas[(len(self.SONICDatas) // 6):]
-
-            self.IRDatas.extend(IRdata)
-            self.SONICDatas.extend(Sonicdata)
-            self.IRIMGDatas.extend(IRImgdata)
-
-            self.ir_data_collector.clear_buffer()
-            self.sonic_data_collector.clear_buffer()
-
-            print("len(self.IRDatas)=",len(self.IRDatas))
-            print("len(self.IRIMGDatas)=",len(self.IRIMGDatas))
-            print("len(self.SONICDatas)=",len(self.SONICDatas))
-            print("升降桌位置:",self.ui.comboBox_2.currentText())
-
-
-            if self.picknumber == 5:
-                self.picknumber = 0
-                self.isfull=1
-            else:
-                self.picknumber += 1
-
-    def click_pushButton1(self):
-        #保存推理原数据
-        save_args = self.get_savetype()
-        if save_args is False:
-            # discard data
-            self.ir_data_collector.clear_buffer()
-            self.sonic_data_collector.clear_buffer()
-        else:
-            print("Saving IR data...")
-
-            # save IR_img np.array as mat
-            sio.savemat(f'{save_args[2] / save_args[1]}.mat',
-                        {'IR_video': np.array(self.IRDatas)}, appendmat=True)
-
-            # save preview heatmap videos
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
-            video_writer = cv2.VideoWriter(f'{save_args[2] / save_args[1]}.mp4', fourcc, 10.0, (160, 160))
-            for hmap in self.IRIMGDatas:
-                video_writer.write(hmap)
-            video_writer.release()
-
-            CONTROL.update_lastround(save_args)
-
+        
     def click_pushButton_opencom(self):
         ports = list(serial.tools.list_ports.comports())
         try:
@@ -252,6 +192,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.pushButton_opencom.setEnabled(0)
         except Exception as e:
             QMessageBox.information(self, "提示","串口连接失败")
+        
 
     def click_pushButton_quickopen(self):
         start_directory = pl.Path('./persondata')
@@ -259,17 +200,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def click_pushButton_show(self):
         self.ui.pushButton_show.setEnabled(False)
-        t = threading.Thread(target=message_classify)
-        t.daemon = True
-        t.start()
 
-        t1 = threading.Thread(target = self.sonic_data_collector.play_sonic)
-        t1.daemon =True
-        t1.start()
-
-        t2 = threading.Thread(target = self.ir_data_collector.play_IR)
-        t2.daemon =True
-        t2.start()
+        jobs = [message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR, self.predictor_result.get_action]
+        for job in jobs:
+            t = threading.Thread(target=job,)
+            t.daemon = True
+            t.start()
         self.iscomdata = 1
 
     def clickpushButton_add(self):
@@ -348,14 +284,11 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.pushButton_start.setText("开始记录")
 
 
-
-
-
     def update_distance_display(self, distance):
         if distance >= 37999.000:
-            self.ui.label_Sonic.setText("超声数据：" + " " * 54 + '-----')
+            self.ui.label_Sonic.setText("超声数据：" + " " * 28 + '-----')
         else:
-            self.ui.label_Sonic.setText("超声数据："+" "*50 + '%9.3f' % distance)
+            self.ui.label_Sonic.setText("超声数据："+" "*24 + '%9.3f' % distance)
 
     def cvMatToQImage(self, cvMat):
         if len(cvMat.shape) == 2:
@@ -367,6 +300,18 @@ class MyMainWindow(QtWidgets.QMainWindow):
             rows, columns, channels = cvMat.shape
             bytesPerLine = channels * columns
             return QImage(cvMat.data, columns, rows, bytesPerLine, QImage.Format.Format_RGB888).rgbSwapped()
+
+    def update_predict_result(self,result):
+        if  result[0] == 'idle':
+            self.ui.label_result.setText('无人')
+        elif result[0] == 'sit':
+            self.ui.label_result.setText('坐姿')
+        elif result[0] == 'stand':
+            self.ui.label_result.setText('站姿')
+        else:
+            self.ui.label_result.setText('---')
+
+        self.ui.label_action.setText(result[1])
 
     def update_heatmap_display(self,heatmap):
         # cv2.imshow('IR_img', heatmap)
@@ -383,7 +328,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-
+    
     # try:
     #     main()
     # except Exception as e:

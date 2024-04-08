@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from preprocess import *
+# from preprocess import *
 
 
 FRAME_IR = 9
@@ -11,6 +11,10 @@ FEATURE_DIM_IR = 4
 FEATURE_DIM_SONIC = 24
 LABEL_NUM = 5
 BATCH = 5
+
+IR_DIM = 1
+
+mydevice = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # 神经网络类
 class MyMLP(nn.Module):
@@ -26,7 +30,7 @@ class MyMLP(nn.Module):
             # nn.ReLU()
         )
         self.mlp2 = nn.Sequential(
-            nn.Linear(FRAME_DISTANCE*2, 16),
+            nn.Linear(FRAME_DISTANCE*IR_DIM, 16),
             nn.ReLU(),
             nn.Linear(16, FEATURE_DIM_SONIC),
             nn.ReLU(),
@@ -59,7 +63,7 @@ class MyMLP(nn.Module):
 
     def forward(self, ir_data, distance_data):
         ir_data = ir_data.view(-1, 64)
-        distance_data = distance_data.view(-1, FRAME_DISTANCE*2)
+        distance_data = distance_data.view(-1, FRAME_DISTANCE*IR_DIM)
 
         ir_output = self.mlp1(ir_data)
         ir_output_per_batch = ir_output.view(-1, FRAME_IR*FEATURE_DIM_IR) # B x (9x4)

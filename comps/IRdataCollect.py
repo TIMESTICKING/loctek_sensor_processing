@@ -30,7 +30,6 @@ class IRDataCollect(QObject):
         super().__init__()
         self.IR_imgs = []
         self.heat_imgs = []
-        self.pickinterval = 0
 
     def resave_data(self, new_scenetype, new_filename, new_sceneroot):
         try:
@@ -71,7 +70,9 @@ class IRDataCollect(QObject):
             IR_raw = MESSAGE.IR.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
-            IR_img = IR_byte_decoder(IR_raw).reshape(8, 8)
+            IR_img = IR_byte_decoder(IR_raw)
+            MESSAGE.IR_net_ready.append(IR_img)
+            IR_img = IR_img.reshape(8, 8)
 
             self._pre_zoom(IR_img) # hook function
             # print(IR_img)
@@ -94,17 +95,12 @@ class IRDataCollect(QObject):
 
 
     def _pre_zoom(self, IR_img):
-        if CONTROL.RECORDING or CONTROL.TESTING:
-            self.pickinterval = self.pickinterval - 1
-            if self.pickinterval <= 0:
-                self.IR_imgs.append(IR_img)
+        if CONTROL.RECORDING or CONTROL.TESTING:            
+            self.IR_imgs.append(IR_img)
 
     def _after_zoom(self, heat_img):
         if CONTROL.RECORDING or CONTROL.TESTING:
-            if self.pickinterval <= 0:
-                self.heat_imgs.append(heat_img)
-                print('红外增加1帧')
-                self.pickinterval = CONTROL.IR_interval
+            self.heat_imgs.append(heat_img)
 
 
 if __name__ == '__main__':

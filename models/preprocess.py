@@ -3,11 +3,22 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import glob
+from scipy.ndimage import minimum_filter
+import torch
 
 
 DATA_TYPE = 'all'
 
-def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
+# 转换为PyTorch张量并缩放数据
+def scale_IR(dataset):
+    tensor = torch.tensor(dataset, dtype=torch.float32)
+    max_val = 35. # tensor.max()
+    min_val = 15. # tensor.min()
+    scaled_tensor = (tensor - min_val) / (max_val - min_val)
+    return scaled_tensor, max_val, min_val
+
+
+def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
 
     if DATA_TYPE == 'all':
         fs = glob.glob(os.path.join(data_dir, pre_keywords))
@@ -72,29 +83,31 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
 def distance_preprocess(distances):
     # 创建一个新的 2*n 的 ndarray
-    new_array = np.empty((2, distances.shape[1]))
+    # new_array = np.empty((2, distances.shape[1]))
 
-    # 复制原始数组到新数组的第一行
-    new_array[0, :] = distances
+    # # 复制原始数组到新数组的第一行
+    # new_array[0, :] = distances
 
-    # 对于第一行中的每个元素
-    for i in range(distances.shape[1]):
-        if distances[0, i] == 38000.0:
-            # 如果元素是 38000.0，则替换为 50~120 的随机数
-            new_array[0, i] = np.random.randint(50, 121)
-            # 在新行对应的位置写入 0.001
-            new_array[1, i] = 0.001
-        else:
-            # 否则在新行对应的位置写入 1.0
-            new_array[1, i] = 1.0
+    # # 对于第一行中的每个元素
+    # for i in range(distances.shape[1]):
+    #     if distances[0, i] == 38000.0:
+    #         # 如果元素是 38000.0，则替换为 50~120 的随机数
+    #         new_array[0, i] = np.random.randint(50, 121)
+    #         # 在新行对应的位置写入 0.001
+    #         new_array[1, i] = 0.001
+    #     else:
+    #         # 否则在新行对应的位置写入 1.0
+    #         new_array[1, i] = 1.0
 
-    # print('old distance is ', distances)
-    # print('new is ', new_array)
+    # # print('old distance is ', distances)
+    # # print('new is ', new_array)
             
-    # scale
-    new_array[0, :] = new_array[0, :] / 160.0
+    # # scale
+    # new_array[0, :] = new_array[0, :] / 160.0
 
-    return new_array
+    filtered_array = minimum_filter(distances, size=3) / 160.0
+
+    return filtered_array
 
 
 
@@ -137,7 +150,7 @@ def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
     sampled_filename = []
 
     for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
-        for offset in [-2, -1, 0, 1, 2]:
+        for offset in [-1, 0, 1]:
             try:
                 sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
                 sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
