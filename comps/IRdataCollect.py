@@ -71,7 +71,9 @@ class IRDataCollect(QObject):
             IR_raw = MESSAGE.IR.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
-            IR_img = IR_byte_decoder(IR_raw).reshape(8, 8)
+            IR_img = IR_byte_decoder(IR_raw)
+            MESSAGE.IR_net_ready.append(IR_img)
+            IR_img = IR_img.reshape(8, 8)
 
             self._pre_zoom(IR_img) # hook function
             # print(IR_img)

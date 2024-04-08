@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 import serial.tools.list_ports
+from models.infer import MyInference
 
 myserial = None
 
@@ -21,6 +22,7 @@ myserial = None
 class DEVICE:
     IR_data_collector = IRDataCollect()
     sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
+    predictor = MyInference()
 
 
 def message_classify():
@@ -84,7 +86,7 @@ def key_handler():
 
 
 def main():
-    jobs = [server.start_server, message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR]
+    jobs = [server.start_server, message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR, DEVICE.predictor.get_action]
     my_threads = []
     for job in jobs:
         t = threading.Thread(target=job,)
@@ -177,18 +179,17 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def click_pushButton_show(self):
         self.ui.pushButton_show.setEnabled(False)
-        t = threading.Thread(target=message_classify)
-        t.daemon = True
-        t.start()
 
-        t1 = threading.Thread(target = self.sonic_data_collector.play_sonic)
-        t1.daemon =True
-        t1.start()
+        jobs = [message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR, DEVICE.predictor.get_action]
+        for job in jobs:
+            t = threading.Thread(target=job,)
+            t.daemon = True
+            t.start()
 
-        t2 = threading.Thread(target = self.ir_data_collector.play_IR)
-        t2.daemon =True
-        t2.start()
         self.iscomdata = 1
+        DEVICE.predictor.set_table_position(0) # 一定要设置桌子高低
+
+
 
     def clickpushButton_add(self):
         name, ok = QInputDialog.getText(self, '新增测试人员', '请输入您的名字:')

@@ -2,6 +2,8 @@ import os
 from queue import Queue
 import pathlib as pl
 import time
+import collections
+from models.model import FRAME_DISTANCE, FRAME_IR
 
 
 class MESSAGE:
@@ -9,6 +11,9 @@ class MESSAGE:
     IR:Queue = Queue(5)
     sonic1:Queue = Queue(5)
     scene_type = Queue(5)
+
+    IR_net_ready = collections.deque(maxlen=FRAME_IR)
+    sonic_net_ready = collections.deque(maxlen=FRAME_DISTANCE)
 
 
 class CONTROL:

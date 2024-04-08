@@ -4,9 +4,19 @@ import pandas as pd
 import scipy.io
 import glob
 from scipy.ndimage import minimum_filter
+import torch
 
 
 DATA_TYPE = 'all'
+
+# 转换为PyTorch张量并缩放数据
+def scale_IR(dataset):
+    tensor = torch.tensor(dataset, dtype=torch.float32)
+    max_val = 35. # tensor.max()
+    min_val = 15. # tensor.min()
+    scaled_tensor = (tensor - min_val) / (max_val - min_val)
+    return scaled_tensor, max_val, min_val
+
 
 def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
 
