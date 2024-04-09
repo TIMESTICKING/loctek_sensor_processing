@@ -16,7 +16,7 @@ class MyInference(QObject):
 
         # load default model
         self.load_network_low_position('models/checkpoints/low/F9-14-MLP221-Fea4-24-gap32-miniFilter-0d96.pth')
-        self.load_network_high_position('models\checkpoints\high\F9-14-MLP221-Fea4-24-gap32-miniFilter-0d92.pth')
+        self.load_network_high_position('models\checkpoints_v2\high\F9-14-MLP221-Fea4-24-gap32-miniFilter-0d82.pth')
 
         # default model is none, you need to specify one
         self.net: MyMLP = None 
