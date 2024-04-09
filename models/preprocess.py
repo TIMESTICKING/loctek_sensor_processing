@@ -7,6 +7,7 @@ from scipy.ndimage import minimum_filter
 
 
 DATA_TYPE = 'all'
+data_version = 2
 
 def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
 
@@ -17,7 +18,7 @@ def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
         _pre = pre_keywords.split('-')[0]
         folders = [
             f'{_pre}-position-nobody',
-            f'{_pre}-position-passenger',
+            # f'{_pre}-position-passenger',
             f'{_pre}-position-sit',
             f'{_pre}-position-stand'
         ]
@@ -44,14 +45,15 @@ def load_preprocess(data_dir='data/', pre_keywords='high-posi*'):
         files = os.listdir(folder_path)
         
         # Group files by sample ID
-        sample_ids = set(file.split('_')[1][:-4] for file in files if file.endswith('.mat'))
+        sample_ids = set(file.split('_')[1][:-4] if data_version == 1 else file[:-4] for file in files if file.endswith('.mat'))
         
         # Process each sample
         for sample_id in sample_ids:
             
             # Load CSV and MAT files for the current sample
-            csv_file = os.path.join(folder_path, f"{folder}_{sample_id}.csv")
-            mat_file = os.path.join(folder_path, f"{folder}_{sample_id}.mat")
+            t_filename = f'{folder}_{sample_id}' if data_version == 1 else sample_id
+            csv_file = os.path.join(folder_path, f"{t_filename}.csv")
+            mat_file = os.path.join(folder_path, f"{t_filename}.mat")
             
             if os.path.exists(csv_file):
                 distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
@@ -140,7 +142,7 @@ def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
     sampled_filename = []
 
     for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
-        for offset in [-1, 0, 1]:
+        for offset in [-3, -2, -1, 0, 1, 2, 3]:
             try:
                 sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
                 sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
@@ -149,7 +151,7 @@ def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
             sampled_distance_dataset.append(sampled_distance_data)
             sampled_IR_dataset.append(sampled_IR_data)
             sampled_gt.append(gt_data)
-            sampled_filename.append(f'offset_{offset}|{filename_data}')
+            sampled_filename.append(f'offset_{offset}|{filename_data}' if offset != 0 else filename_data)
 
     return sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename
 
@@ -162,7 +164,7 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    datasets = load_preprocess(data_dir='../data')
+    datasets = load_preprocess(data_dir='../data_v2')
     # 准备训练集
     sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset = prepare_datasets(datasets, 14, 9)
 
