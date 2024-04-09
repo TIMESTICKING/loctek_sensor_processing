@@ -14,7 +14,6 @@ class SonicDataCollect(QObject):
         self.queue = queue
         self.name = name
         self.distances = []
-        self.pickinterval = 0
 
     def play_sonic(self):
         while True:
@@ -23,11 +22,11 @@ class SonicDataCollect(QObject):
             # 将字节数组转换为浮点数列表
             try:
                 float_number = struct.unpack('f', sonic_raw)[0]
-                if CONTROL.RECORDING:
-                    self.pickinterval = self.pickinterval - 1
-                    if self.pickinterval <= 0:
-                        self.distances.append(float_number)
-                        self.pickinterval = CONTROL.Sonic_interval
+                MESSAGE.sonic_net_ready.append(float_number)
+                
+                if CONTROL.RECORDING or CONTROL.TESTING:      
+                    self.distances.append(float_number)
+
                 if self.socket is not None and self.socket[1] is not None:
                     self.socket[1].sendall(str(float_number).encode())
                 else:

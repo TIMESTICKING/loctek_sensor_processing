@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from preprocess import *
+# from preprocess import *
 
 
 FRAME_IR = 9
