@@ -51,12 +51,12 @@ class IRDataCollect(QObject):
         
         # save preview heatmap videos
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
-        video_writer = cv2.VideoWriter(f'{sceneroot / filename}.mp4', fourcc, 10.0, (160, 160))
+        video_writer = cv2.VideoWriter(f'{sceneroot / filename}.mp4', fourcc, 10.0, (160, 160))      
         for hmap in self.heat_imgs:
             video_writer.write(hmap) 
         video_writer.release()
-
-        self.clear_buffer()                
+        
+        # self.clear_buffer()                
   
 
     def clear_buffer(self):

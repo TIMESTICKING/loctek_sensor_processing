@@ -26,6 +26,7 @@ class MyInference(QObject):
         self.action = ['下降', '不动', '升起']
         self.label_filter_size = 8
         self.predicted_label_raw = collections.deque(maxlen=self.label_filter_size)
+        self.threadon = 0
 
     def load_network_low_position(self, path):
         """给低位网络模型加载参数
@@ -73,7 +74,7 @@ class MyInference(QObject):
             print("请调用 set_table_position(position=<int 0 or 1>) 来设置当前桌子的高低")
             time.sleep(2)
         while True:
-            if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
+            if self.threadon == 1 and len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
                 IR_data, _, _ = scale_IR(np.array(MESSAGE.IR_net_ready))
                 distance_data = torch.from_numpy(distance_preprocess(np.array(MESSAGE.sonic_net_ready, dtype=np.float32)))
 

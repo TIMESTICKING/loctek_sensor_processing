@@ -51,7 +51,7 @@ class SonicDataCollect(QObject):
             writer = csv.writer(file)
             writer.writerow(self.distances)
         
-        self.clear_buffer()
+        # self.clear_buffer()
 
 
     def clear_buffer(self):
