@@ -144,8 +144,22 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
    
 def _mirror_IR(IR_data):
-    pass
+    IR_data_mirrored = IR_data.reshape(-1, 8, 8)[:,:,::-1]
+    return IR_data_mirrored.reshape(-1, 64)
 
+
+def _reverse_timeline(IR, distance, gt):
+    IR_re = IR[::-1, :]
+    distance_re = distance[::-1, :]
+
+    if DATA_TYPE == 'all':
+        '''swap the label such that sit2stand is stand2sit, vise versa'''
+        if gt == 2:
+            gt == 4
+        elif gt == 4:
+            gt == 2
+    
+    return IR_re, distance_re, gt
 
 
 def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
@@ -182,7 +196,17 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
             sampled_train_gt.append(gt_data)
 
             '''data augment'''
+            # mirror the IR
             mirrored_IR = _mirror_IR(sampled_IR_data)
+            sampled_distance_train_dataset.append(sampled_distance_data)
+            sampled_IR_train_dataset.append(mirrored_IR)
+            sampled_train_gt.append(gt_data)
+            # reverse timeline
+            IR_re, distance_re, gt_re = _reverse_timeline(sampled_IR_data, sampled_distance_data, gt_data)
+            sampled_distance_train_dataset.append(distance_re)
+            sampled_IR_train_dataset.append(IR_re)
+            sampled_train_gt.append(gt_re)
+
 
     # data scale
     train_distance_tensor = torch.tensor(np.stack(sampled_distance_train_dataset, axis=0), dtype=torch.float32)
@@ -225,7 +249,7 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    datasets = load_preprocess(data_dir='./data_v2', pre_keywords='high-posi*')
+    datasets = load_preprocess(data_dir='../data_v2', pre_keywords='low-posi*')
     # 准备训练集
     train_dataset, test_dataset = prepare_datasets(datasets, 0.7, 14, 9)
 
