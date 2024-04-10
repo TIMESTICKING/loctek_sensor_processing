@@ -115,23 +115,18 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
         files = os.listdir(folder_path)
         
         # Group files by sample ID
-        sample_ids = set(file.split('_')[1][:-4] if data_version == 1 else file[:-4] for file in files if file.endswith('.mat'))
+        filenames = set(file[:-4] for file in files if file.endswith('.mat'))
         
         # Process each sample
-        for sample_id in sample_ids:
-            
-            # Load CSV and MAT files for the current sample
-            t_filename = f'{folder}_{sample_id}' if data_version == 1 else sample_id
-            csv_file = os.path.join(folder_path, f"{t_filename}.csv")
-            mat_file = os.path.join(folder_path, f"{t_filename}.mat")
+        for filename in filenames:
+            csv_file = os.path.join(folder_path, f"{filename}.csv")
+            mat_file = os.path.join(folder_path, f"{filename}.mat")
             
             if os.path.exists(csv_file):
                 distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
             if os.path.exists(mat_file):
                 IR_dataset.append(scipy.io.loadmat(mat_file)['IR_video'])
-                filename_dataset.append(f'{folder}_{sample_id}')
-            else:
-                pass
+                filename_dataset.append(f'{folder_path}/{filename}')
 
             groudtruth.append(labels.index(label))
 
@@ -251,7 +246,7 @@ def fix_sonic(dis: np.ndarray):
 def make_dataset():
     datasets = load_preprocess(data_dir='../data_v2', pre_keywords='high-posi*')
     # 准备训练集
-    train_dataset, test_dataset = prepare_datasets(datasets, 0.9, 14, 9)
+    train_dataset, test_dataset = prepare_datasets(datasets, 0.8, 14, 9)
 
     # 打印结果以验证
     print(f"Distance train dataset: {train_dataset[0].shape}")
