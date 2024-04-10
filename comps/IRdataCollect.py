@@ -10,13 +10,26 @@ import numpy as np
 import time
 from .utils import MESSAGE, CONTROL
 import threading
+from PyQt6.QtCore import QObject, pyqtSignal
+
+def IR_byte_decoder(IR_raw):
+    IR_float = []
+    for i in range(0, len(IR_raw), 4):
+        float_number = struct.unpack('f', IR_raw[i:i+4])[0]
+        IR_float.append(float_number)
+    IR_img = np.array(IR_float)
+
+    return IR_img
 
 
-class IRDataCollect:
+class IRDataCollect(QObject):
+    new_heatmap_signal = pyqtSignal(np.ndarray)
+
+
     def __init__(self) -> None:
+        super().__init__()
         self.IR_imgs = []
         self.heat_imgs = []
-        
 
     def resave_data(self, new_scenetype, new_filename, new_sceneroot):
         try:
@@ -57,12 +70,9 @@ class IRDataCollect:
             IR_raw = MESSAGE.IR.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
-            IR_float = []
-            for i in range(0, len(IR_raw), 4):
-                float_number = struct.unpack('f', IR_raw[i:i+4])[0]
-                IR_float.append(float_number)
-            IR_img = np.array(IR_float).reshape(8, 8)
-
+            IR_img = IR_byte_decoder(IR_raw)
+            MESSAGE.IR_net_ready.append(IR_img)
+            IR_img = IR_img.reshape(8, 8)
 
             self._pre_zoom(IR_img) # hook function
             # print(IR_img)
@@ -72,24 +82,24 @@ class IRDataCollect:
             zoomed_IR_int = np.asarray((zoomed_IR - 15) * (255 / 25), np.uint8)
             heatmap = cv2.applyColorMap(zoomed_IR_int, cv2.COLORMAP_JET)
 
-            self._after_zoom(heatmap) # hook function
+            self._after_zoom(heatmap)   # hook function
+            self.new_heatmap_signal.emit(heatmap)
 
-            cv2.imshow('IR_img', heatmap)
-
-            key = cv2.waitKey(1)
-            if key != -1:
-                MESSAGE.KEY.put(key, timeout=1)
+            #  cv2.imshow('IR_img', heatmap)
+            #  key = cv2.waitKey(1)
+            #  if key != -1:
+            #     MESSAGE.KEY.put(key, timeout=1)
         
         # raise Exception('System terminated by user at "q"')
 
 
 
     def _pre_zoom(self, IR_img):
-        if CONTROL.RECORDING:
+        if CONTROL.RECORDING or CONTROL.TESTING:            
             self.IR_imgs.append(IR_img)
 
     def _after_zoom(self, heat_img):
-        if CONTROL.RECORDING:
+        if CONTROL.RECORDING or CONTROL.TESTING:
             self.heat_imgs.append(heat_img)
 
 

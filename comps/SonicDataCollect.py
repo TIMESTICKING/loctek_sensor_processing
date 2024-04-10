@@ -3,10 +3,13 @@ import shutil
 import struct
 import traceback
 from .utils import *
+from PyQt6.QtCore import QObject,pyqtSignal
 
-class SonicDataCollect:
+class SonicDataCollect(QObject):
 
+    new_dist_signal = pyqtSignal(float)
     def __init__(self, queue, socket=None, name='sonic1') -> None:
+        super().__init__()
         self.socket = socket
         self.queue = queue
         self.name = name
@@ -19,13 +22,16 @@ class SonicDataCollect:
             # 将字节数组转换为浮点数列表
             try:
                 float_number = struct.unpack('f', sonic_raw)[0]
-                if CONTROL.RECORDING:
-                    self.distances.append(float_number)
+                MESSAGE.sonic_net_ready.append(float_number)
                 
+                if CONTROL.RECORDING or CONTROL.TESTING:      
+                    self.distances.append(float_number)
+
                 if self.socket is not None and self.socket[1] is not None:
                     self.socket[1].sendall(str(float_number).encode())
-                # else:
-                #     print(f'{self.name} is {float_number}')
+                else:
+                    self.new_dist_signal.emit(float_number)
+
             except Exception as e:
                 traceback.print_exc()
 
