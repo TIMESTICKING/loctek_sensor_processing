@@ -19,69 +19,6 @@ def scale_IR(dataset):
     return scaled_tensor, max_val, min_val
 
 
-def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
-
-    if DATA_TYPE == 'all':
-        fs = glob.glob(os.path.join(data_dir, pre_keywords))
-        folders = [os.path.basename(folder) for folder in fs]
-    else:
-        _pre = pre_keywords.split('-')[0]
-        folders = [
-            f'{_pre}-position-nobody',
-            # f'{_pre}-position-passenger',
-            f'{_pre}-position-sit',
-            f'{_pre}-position-stand'
-        ]
-
-    # Prepare to collect data and labels
-    filename_dataset = []
-    distance_dataset = []
-    IR_dataset = []
-    groudtruth = []
-    if DATA_TYPE == 'all':
-        labels = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
-    else:
-        labels = ['idle', 'sit', 'stand']
-
-    # Process each folder
-    for folder in folders:
-        # Determine the label based on folder name
-        label = 'idle' if folder.endswith('nobody') or folder.endswith('passenger') else folder.split('-')[-1]
-        
-        # Path to the current folder
-        folder_path = os.path.join(data_dir, folder)
-        
-        # Get all file names in the current folder
-        files = os.listdir(folder_path)
-        
-        # Group files by sample ID
-        sample_ids = set(file.split('_')[1][:-4] if data_version == 1 else file[:-4] for file in files if file.endswith('.mat'))
-        
-        # Process each sample
-        for sample_id in sample_ids:
-            
-            # Load CSV and MAT files for the current sample
-            t_filename = f'{folder}_{sample_id}' if data_version == 1 else sample_id
-            csv_file = os.path.join(folder_path, f"{t_filename}.csv")
-            mat_file = os.path.join(folder_path, f"{t_filename}.mat")
-            
-            if os.path.exists(csv_file):
-                distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
-            if os.path.exists(mat_file):
-                IR_dataset.append(scipy.io.loadmat(mat_file)['IR_video'])
-                filename_dataset.append(f"{folder}_{sample_id}")
-            else:
-                pass
-
-            groudtruth.append(labels.index(label))
-
-
-    print('distance length is', len(distance_dataset))
-    print('IR length is', len(IR_dataset))
-    print('gt length is', len(groudtruth))
-
-    return distance_dataset, IR_dataset, groudtruth, filename_dataset
-
 
 def distance_preprocess(distances):
     # 创建一个新的 2*n 的 ndarray
@@ -142,28 +79,137 @@ def sample_frames_fix(data, num_frames, offset, frame_interval=5):
     return data[indices]
 
 
-def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
+def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
+
+    if DATA_TYPE == 'all':
+        fs = glob.glob(os.path.join(data_dir, pre_keywords))
+        folders = [os.path.basename(folder) for folder in fs]
+    else:
+        _pre = pre_keywords.split('-')[0]
+        folders = [
+            f'{_pre}-position-nobody',
+            # f'{_pre}-position-passenger',
+            f'{_pre}-position-sit',
+            f'{_pre}-position-stand'
+        ]
+
+    # Prepare to collect data and labels
+    filename_dataset = []
+    distance_dataset = []
+    IR_dataset = []
+    groudtruth = []
+    if DATA_TYPE == 'all':
+        labels = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
+    else:
+        labels = ['idle', 'sit', 'stand']
+
+    # Process each folder
+    for folder in folders:
+        # Determine the label based on folder name
+        label = 'idle' if folder.endswith('nobody') or folder.endswith('passenger') else folder.split('-')[-1]
+        
+        # Path to the current folder
+        folder_path = os.path.join(data_dir, folder)
+        
+        # Get all file names in the current folder
+        files = os.listdir(folder_path)
+        
+        # Group files by sample ID
+        sample_ids = set(file.split('_')[1][:-4] if data_version == 1 else file[:-4] for file in files if file.endswith('.mat'))
+        
+        # Process each sample
+        for sample_id in sample_ids:
+            
+            # Load CSV and MAT files for the current sample
+            t_filename = f'{folder}_{sample_id}' if data_version == 1 else sample_id
+            csv_file = os.path.join(folder_path, f"{t_filename}.csv")
+            mat_file = os.path.join(folder_path, f"{t_filename}.mat")
+            
+            if os.path.exists(csv_file):
+                distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
+            if os.path.exists(mat_file):
+                IR_dataset.append(scipy.io.loadmat(mat_file)['IR_video'])
+                filename_dataset.append(f'{folder}_{sample_id}')
+            else:
+                pass
+
+            groudtruth.append(labels.index(label))
+
+
+    print('distance length is', len(distance_dataset))
+    print('IR length is', len(IR_dataset))
+    print('gt length is', len(groudtruth))
+
+    return distance_dataset, IR_dataset, groudtruth, filename_dataset
+
+   
+
+
+def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
+    # set parameters
+    SONIC_INTERVAL = 2
+    IR_INTERVAL = 3
+
+    # split the dataset
+    assert len(datasets[0]) == len(datasets[1]) == len(datasets[2]) == len(datasets[3]), 'datasets length not match!'
+
+    num = len(datasets[0])
+    ids = np.arange(num)
+    np.random.shuffle(ids)
+
+    ids_train, ids_test = ids[:int(num * ratio)], ids[int(num * ratio):]
+
     """准备训练集"""
     # sampled_distance_dataset = [sample_frames_auto(fix_sonic(data), num_distance_frames) for data in distance_dataset]
     # sampled_IR_dataset = [sample_frames_fix(fix_IR(data), num_IR_frames) for data in IR_dataset]
-    sampled_distance_dataset = []
-    sampled_IR_dataset = []
-    sampled_gt = []
-    sampled_filename = []
+    sampled_distance_train_dataset = []
+    sampled_IR_train_dataset = []
+    sampled_train_gt = []
 
-    for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
-        for offset in [-3, -2, -1, 0, 1, 2, 3]:
+    for i in ids_train:
+        distance_data, IR_data, gt_data = datasets[0][i], datasets[1][i], datasets[2][i]
+        for offset in [-2, -1, 0, 1, 2]:
             try:
-                sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
-                sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
+                sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, SONIC_INTERVAL)
+                sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, IR_INTERVAL)
             except Exception as e:
                 continue
-            sampled_distance_dataset.append(sampled_distance_data)
-            sampled_IR_dataset.append(sampled_IR_data)
-            sampled_gt.append(gt_data)
-            sampled_filename.append(f'offset_{offset}|{filename_data}' if offset != 0 else filename_data)
+            sampled_distance_train_dataset.append(sampled_distance_data)
+            sampled_IR_train_dataset.append(sampled_IR_data)
+            sampled_train_gt.append(gt_data)
+            # sampled_train_filename.append(f'offset_{offset}|{filename_data}' if offset != 0 else filename_data)
+    
+    # data scale
+    train_distance_tensor = torch.tensor(np.stack(sampled_distance_train_dataset, axis=0), dtype=torch.float32)
+    train_IR_tensor, max_IR, min_IR = scale_IR(np.stack(sampled_IR_train_dataset, axis=0))
 
-    return sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename
+    train_dataset = (train_distance_tensor, train_IR_tensor, sampled_train_gt, [0] * len(sampled_train_gt))
+
+    '''prepare the test set'''
+    sampled_distance_test_dataset = []
+    sampled_IR_test_dataset = []
+    sampled_test_gt = []
+    sampled_test_filename = []
+
+    for i in ids_test:
+        distance_data, IR_data, gt_data, filename = datasets[0][i], datasets[1][i], datasets[2][i], datasets[3][i]
+        try:
+            sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 0, SONIC_INTERVAL)
+            sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, 0, IR_INTERVAL)
+        except Exception as e:
+            continue
+        sampled_distance_test_dataset.append(sampled_distance_data)
+        sampled_IR_test_dataset.append(sampled_IR_data)
+        sampled_test_gt.append(gt_data)
+        sampled_test_filename.append(filename)
+
+    # data scale
+    test_distance_tensor = torch.tensor(np.stack(sampled_distance_test_dataset, axis=0), dtype=torch.float32)
+    test_IR_tensor, max_IR, min_IR = scale_IR(np.stack(sampled_IR_test_dataset, axis=0))
+
+    test_dataset = (test_distance_tensor, test_IR_tensor, sampled_test_gt, sampled_test_filename)
+
+    return train_dataset, test_dataset
 
 
 def fix_IR(IR: np.ndarray):
@@ -174,18 +220,18 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    datasets = load_preprocess(data_dir='../data_v2')
+    datasets = load_preprocess(data_dir='../data_v2', pre_keywords='high-posi*')
     # 准备训练集
-    sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset = prepare_datasets(datasets, 14, 9)
+    train_dataset, test_dataset = prepare_datasets(datasets, 0.7, 14, 9)
 
     # 打印结果以验证
-    for i in range(2):
-        print(f"Distance dataset {i+1}: {len(sampled_distance_dataset)}, {sampled_distance_dataset[i].shape}")
-        print(f"IR dataset {i+1}: {len(sampled_IR_dataset)}, {sampled_IR_dataset[i].shape}")
-        print(f"gt dataset {i+1}: {len(groudtruth)}")
-        print(f"filename dataset {i+1}: {len(sampled_filename_dataset)}")
+    print(f"Distance train dataset: {train_dataset[0].shape}")
+    print(f"IR train dataset: {train_dataset[1].shape}")
+    print(f"gt train dataset: {len(train_dataset[2])}")
 
-    return sampled_distance_dataset, sampled_IR_dataset, groudtruth, sampled_filename_dataset
+    print("test dataset has file amount: ", test_dataset[0].shape)
+
+    return train_dataset, test_dataset
 
 
 if __name__ == '__main__':
