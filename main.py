@@ -104,7 +104,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.ui = Ui_SerialShow()
         self.ui.setupUi(self)
-        self.ui.pushButton_opencom.clicked.connect(self.click_pushButton_opencom)
+        self.ui.pushButton_cleckcoms.clicked.connect(self.click_pushButton_cleckcoms)
         self.ui.pushButton_quickopen.clicked.connect(self.click_pushButton_quickopen)
         self.ui.pushButton_show.clicked.connect(self.click_pushButton_show)
         self.ui.pushButton_start.clicked.connect(self.clickpushButton_start)
@@ -117,7 +117,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ir_data_collector.new_heatmap_signal.connect(self.update_heatmap_display)
         self.predictor_result = MyInference()
         self.predictor_result.predict_result_signal.connect(self.update_predict_result)
-
         self.ui.comboBox_choosemode.currentTextChanged.connect(self.on_choosemode_changed)
         self.ui.comboBox_mode.currentTextChanged.connect(self.on_mode_changed)
         self.ui.comboBox_2.currentTextChanged.connect(self.on_tablepos_changed)
@@ -156,7 +155,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.comboBox_2.setCurrentIndex(0)         # 默认桌子为低位
         self.predictor_result.set_table_position(0)     # 默认桌子为低位
         self.wordThreads = []           # 工作线程池
-
     def onTimerOut(self):
         self.secondSec+=1
         self.ui.pushButton_start.setText("停止记录:"+str(self.secondSec/10.0)+"s")
@@ -223,34 +221,41 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 self.ui.comboBox_chooseperson.setCurrentText(current_person)
         self.allname = names
         
-
         
-    def click_pushButton_opencom(self):
+    def click_pushButton_cleckcoms(self):
         ports = list(serial.tools.list_ports.comports())
-        try:
-            global myserial
-            parser = ArgumentParser()
-            parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
-            parser.add_argument('--serial', type=str, default='COM3')
-            args = parser.parse_args()
-            SOCKET.SERVER_PORT = args.port
-            myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
-            self.ui.pushButton_opencom.setEnabled(0)
-            self.iscomconnect = 1
-        except Exception as e:
-            QMessageBox.information(self, "提示","串口连接失败")
-        
+        for port in ports:
+            # print(f"串口名称:{port.device}")
+            # print(f"串口描述:{port.description}")
+            # print(f"制造商ID:{port.manufacturer}")
+            # print(f"产品ID:{port.product}")
+            self.ui.comboBox_Coms.addItem(f"{port.device}")
 
     def click_pushButton_quickopen(self):
         start_directory = pl.Path('./persondata')
         os.system("explorer.exe %s" % start_directory)
 
     def click_pushButton_show(self):
-        if self.iscomconnect == 0:
-            QMessageBox.information(self, "提示", "请打开串口!")
+        if self.ui.comboBox_Coms.count()==0:
+            QMessageBox.information(self, "提示","未找到端口连接！")
             return
+        try:
+            global myserial
+            parser = ArgumentParser()
+            parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
+            print("当前端口为:",self.ui.comboBox_Coms.currentText())
+            parser.add_argument('--serial', type=str, default=self.ui.comboBox_Coms.currentText())
+            args = parser.parse_args()
+            SOCKET.SERVER_PORT = args.port
+            myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
+            self.iscomconnect = 1
+            self.ui.pushButton_cleckcoms.setEnabled(0)
+            self.ui.comboBox_Coms.setEnabled(0)
+        except Exception as e:
+            QMessageBox.information(self, "提示","串口连接失败！")
+            return
+        
         self.ui.pushButton_show.setEnabled(False)
-
         jobs = [message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR]
         for job in jobs:
             t = threading.Thread(target=job,)
@@ -260,7 +265,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         t_predice = threading.Thread(target=self.predictor_result.get_action,)
         t_predice.daemon = True
         t_predice.start()
-        self.predictor_result.threadon = 0
         
         self.iscomdata = 1
 
