@@ -12,25 +12,6 @@ import torch
 import numpy as np
 import random
 
-def seed_everything(seed=42):
-    """
-    固定所有相关的随机种子以保证实验的可重复性。
-
-    参数:
-    - seed: 随机种子，默认为42。
-    """
-    random.seed(seed)  # Python random module
-    np.random.seed(seed)  # Numpy
-    torch.manual_seed(seed)  # PyTorch
-    torch.cuda.manual_seed(seed)  # PyTorch CUDA (for a single GPU)
-    torch.cuda.manual_seed_all(seed)  # PyTorch CUDA (for all GPUs)
-    
-    # 当使用cudnn时，确保实验可重复
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-# 使用示例
-seed_everything(42)
 
 class CustomDataset(Dataset):
     def __init__(self, IR_dataset, distance_dataset, ground_truth, filename_dataset):
@@ -96,10 +77,12 @@ net = MyMLP().cuda()
 
 # 定义损失函数和优化器
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.AdamW(net.parameters(), lr=0.001)
+optimizer = optim.Adam(net.parameters(), lr=0.002)
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.99)
+# optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9, nesterov=True)
 loss_history = []
 # 训练循环示例
-for epoch in range(200):
+for epoch in range(300):
     running_loss = 0.0
     for i, (IR_data, distance_data, labels, _) in enumerate(train_dataloader, 0):
         IR_data = IR_data.cuda()
@@ -187,14 +170,13 @@ timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 target_folder = os.path.join("wrongs", timestamp)
 os.makedirs(target_folder, exist_ok=True)
 
-# 复制被错误分类的样本到目标文件夹
+# 复制被错误分类的样本到目标文件
 for filename in misclassified_samples:
     # 假设原始文件位于当前文件夹中
     real_filename = filename.split('|')[1]
     source_path = Path('..') / 'data' / real_filename.split('_')[0] / f'{real_filename}.mp4'
     # target_path = os.path.join(target_folder, os.path.basename(filename))
     shutil.copy(source_path, target_folder)
-
 print(f"被错误分类的样本已复制到 {target_folder}")
 total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
 print(f"Total parameters: {total_params}")

@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import glob
-
-
+import random
+from scipy.ndimage import affine_transform
+import math
 DATA_TYPE = 'all'
 
 def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
@@ -68,6 +69,31 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
     print('gt length is', len(groudtruth))
 
     return distance_dataset, IR_dataset, groudtruth, filename_dataset
+
+def skew_data_limited(data, skew_angle):
+    """
+    对数据进行水平倾斜操作，倾斜角度限制在左右45度以内。
+    
+    参数:
+    - data: 输入数据，形状为(N, H, W)的NumPy数组。
+    - skew_angle: 倾斜角度，单位为度。
+    
+    返回:
+    - 倾斜后的数据。
+    """
+    # 限制倾斜角度在-45到45度之间
+    skew_angle = np.clip(skew_angle, -45, 45)
+    # 计算倾斜因子
+    skew_factor = math.tan(math.radians(skew_angle))
+    
+    # 定义仿射变换矩阵
+    affine_matrix = np.array([[1, skew_factor, 0], [0, 1, 0], [0, 0, 1]])
+    
+    skewed_data = np.zeros_like(data)
+    for i in range(data.shape[0]):
+        # 对每一帧应用仿射变换进行倾斜
+        skewed_data[i] = affine_transform(data[i], affine_matrix, order=1, mode='reflect', prefilter=False)
+    return skewed_data
 
 
 def distance_preprocess(distances):
@@ -145,7 +171,6 @@ def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
     sampled_IR_dataset_test = []
     sampled_gt_test = []
     sampled_filename_test = []
-
     index = 0
     for distance_data, IR_data, gt_data, filename_data in zip(*datasets):
         index += 1
@@ -164,21 +189,48 @@ def prepare_datasets(datasets, num_distance_frames, num_IR_frames):
             sampled_filename_test.append(f'offset_{offset}|{filename_data}')
         else: 
             # 数据增强
-            # 随机偏移: offset
-            # 翻转:
-            # 倒序:
-            # 噪声:
-            for offset in [-2,-1,0,1,2]:# [-2, -1, 0, 1, 2]:
+            # 随机偏移: offset 45 to 83
+            # 翻转: 没有效果
+            # 倒序: 
+            # 噪声: 没效果
+            
+            # offset
+            for offset in [-2, -1, 0, 1, 2]:# [-2, -1, 0, 1, 2]:
                 try:
                     sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, 2)
                     sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, 3)
+                    # skewed_data = skew_data_limited(sampled_IR_data.reshape(-1,8,8), 50)
+                    sampled_distance_dataset.append(sampled_distance_data)
+                    
+                    sampled_IR_dataset.append(sampled_IR_data)
+                    sampled_gt.append(gt_data)
+                    sampled_filename.append(f'offset_{offset}|{filename_data}')
                 except Exception as e:
                     continue
-                sampled_distance_dataset.append(sampled_distance_data)
-                sampled_IR_dataset.append(sampled_IR_data)
-                sampled_gt.append(gt_data)
-                sampled_filename.append(f'offset_{offset}|{filename_data}')
-
+            
+            # TODO
+            # noise
+            # noise_IR = np.random.randn(*sampled_IR_data.shape) * (sampled_IR_data.max() - sampled_IR_data.min()) * 2
+            # noise_DIST = np.random.randn(*sampled_distance_data.shape) * (sampled_distance_data.max() - sampled_distance_data.min())
+            
+            # TODO
+            # flip
+            # if random.random() < 0.3:
+            #     try:
+            #         flipped_IR = sampled_IR_data.reshape(-1,8,8)[:,::-1,:]
+            #         sampled_distance_dataset.append(sampled_distance_data)
+            #         sampled_IR_dataset.append(flipped_IR.reshape(-1,64))
+            #         sampled_gt.append(gt_data)
+            #         sampled_filename.append(f'offset_{offset}_flip|{filename_data}')
+            #     except Exception as e:
+            #             continue
+                
+            # IR flip
+            # # data[:, :, ::-1]__ 
+            # sampled_distance_dataset.append(sampled_distance_data)
+            # sampled_IR_dataset.append(sampled_IR_data[:, ::-1, :])
+            # sampled_gt.append(gt_data)
+            # sampled_filename.append(f'offset_{offset}|{filename_data}')
     return (sampled_distance_dataset, sampled_IR_dataset, sampled_gt, sampled_filename), \
         (sampled_distance_dataset_test, sampled_IR_dataset_test, sampled_gt_test, sampled_filename_test)
 
