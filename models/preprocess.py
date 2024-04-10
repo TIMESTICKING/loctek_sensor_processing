@@ -143,6 +143,23 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
     return distance_dataset, IR_dataset, groudtruth, filename_dataset
 
    
+def _mirror_IR(IR_data):
+    IR_data_mirrored = IR_data.reshape(-1, 8, 8)[:,:,::-1]
+    return IR_data_mirrored.reshape(-1, 64)
+
+
+def _reverse_timeline(IR, distance, gt):
+    IR_re = IR[::-1, :]
+    distance_re = distance[::-1, :]
+
+    if DATA_TYPE == 'all':
+        '''swap the label such that sit2stand is stand2sit, vise versa'''
+        if gt == 2:
+            gt == 4
+        elif gt == 4:
+            gt == 2
+    
+    return IR_re, distance_re, gt
 
 
 def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
@@ -168,7 +185,7 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
 
     for i in ids_train:
         distance_data, IR_data, gt_data = datasets[0][i], datasets[1][i], datasets[2][i]
-        for offset in [-2, -1, 0, 1, 2]:
+        for offset in [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]:
             try:
                 sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, SONIC_INTERVAL)
                 sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, IR_INTERVAL)
@@ -177,8 +194,20 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
             sampled_distance_train_dataset.append(sampled_distance_data)
             sampled_IR_train_dataset.append(sampled_IR_data)
             sampled_train_gt.append(gt_data)
-            # sampled_train_filename.append(f'offset_{offset}|{filename_data}' if offset != 0 else filename_data)
-    
+
+            '''data augment'''
+            # mirror the IR
+            mirrored_IR = _mirror_IR(sampled_IR_data)
+            sampled_distance_train_dataset.append(sampled_distance_data)
+            sampled_IR_train_dataset.append(mirrored_IR)
+            sampled_train_gt.append(gt_data)
+            # reverse timeline
+            IR_re, distance_re, gt_re = _reverse_timeline(sampled_IR_data, sampled_distance_data, gt_data)
+            sampled_distance_train_dataset.append(distance_re)
+            sampled_IR_train_dataset.append(IR_re)
+            sampled_train_gt.append(gt_re)
+
+
     # data scale
     train_distance_tensor = torch.tensor(np.stack(sampled_distance_train_dataset, axis=0), dtype=torch.float32)
     train_IR_tensor, max_IR, min_IR = scale_IR(np.stack(sampled_IR_train_dataset, axis=0))
@@ -222,7 +251,7 @@ def fix_sonic(dis: np.ndarray):
 def make_dataset():
     datasets = load_preprocess(data_dir='../data_v2', pre_keywords='high-posi*')
     # 准备训练集
-    train_dataset, test_dataset = prepare_datasets(datasets, 0.7, 14, 9)
+    train_dataset, test_dataset = prepare_datasets(datasets, 0.9, 14, 9)
 
     # 打印结果以验证
     print(f"Distance train dataset: {train_dataset[0].shape}")
