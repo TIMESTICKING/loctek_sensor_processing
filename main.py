@@ -9,7 +9,7 @@ from my_socket import server
 from argparse import ArgumentParser
 import sys
 from PyQt6 import QtWidgets
-from serialShow import Ui_SerialShow
+from Ui_serialShow import Ui_SerialShow
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog
 from PyQt6 import QtCore
@@ -109,6 +109,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_show.clicked.connect(self.click_pushButton_show)
         self.ui.pushButton_start.clicked.connect(self.clickpushButton_start)
         self.ui.pushButton_addperson.clicked.connect(self.clickpushButton_add)
+        
 
         self.sonic_data_collector = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
         self.sonic_data_collector.new_dist_signal.connect(self.update_distance_display)
@@ -117,11 +118,13 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.predictor_result = MyInference()
         self.predictor_result.predict_result_signal.connect(self.update_predict_result)
 
+        self.ui.comboBox_choosemode.currentTextChanged.connect(self.on_choosemode_changed)
         self.ui.comboBox_mode.currentTextChanged.connect(self.on_mode_changed)
         self.ui.comboBox_2.currentTextChanged.connect(self.on_tablepos_changed)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.iscomconnect = 0
         self.iscomdata = 0
-
+        self.secondSec = 0
 
         SCENETYPEPos=['低位','高位']
         SCENETYPEModes = \
@@ -139,44 +142,87 @@ class MyMainWindow(QtWidgets.QMainWindow):
         for name_type in nametypes:
                     self.ui.comboBox_chooseperson.addItem(name_type)
         self.allname = []
+
         self.refresh_timer = QtCore.QTimer(self)
         self.refresh_timer.timeout.connect(self.timer_callback)
         self.refresh_timer.start(500)
+
+        self.caltimer = QtCore.QTimer(self)
+        self.caltimer.setInterval(100)
+        self.caltimer.timeout.connect(self.onTimerOut)
+
         self.issaving = 0
         self.ui.stackedWidget_Mode.setCurrentIndex(0)      
         self.ui.comboBox_2.setCurrentIndex(0)         # 默认桌子为低位
         self.predictor_result.set_table_position(0)     # 默认桌子为低位
+        self.wordThreads = []           # 工作线程池
+
+    def onTimerOut(self):
+        self.secondSec+=1
+        self.ui.pushButton_start.setText("停止记录:"+str(self.secondSec/10.0)+"s")
+
+        
 
     def keyPressEvent(self, keyevent):
-        if keyevent.key() == Qt.Key.Key_S:
-            print("click")
+        if keyevent.key() == Qt.Key.Key_Space or keyevent.key() == Qt.Key.Key_Return:
+            print("click space : start or stop recording!")
             self.clickpushButton_start()
+        
+        current_mode = self.ui.comboBox_choosemode.currentIndex()
+        if keyevent.key() == Qt.Key.Key_Right and current_mode != self.ui.comboBox_choosemode.count() - 1:            
+            self.ui.comboBox_choosemode.setCurrentIndex(current_mode + 1)
+        if keyevent.key() == Qt.Key.Key_Left and current_mode != 0:            
+            self.ui.comboBox_choosemode.setCurrentIndex(current_mode - 1)
+        if keyevent.key() == Qt.Key.Key_Up or keyevent.key() == Qt.Key.Key_Down:      
+            self.ui.comboBox_chooseposition.setCurrentIndex(not self.ui.comboBox_chooseposition.currentIndex())
+            
+
     
     def on_tablepos_changed(self, text):
         if(text == "高位"):
             self.predictor_result.set_table_position(1)
         elif(text == "低位"):
             self.predictor_result.set_table_position(0)
-
+    
+    def on_choosemode_changed(self,text):
+        self.setFocus()
 
     def on_mode_changed(self, text):
         self.ui.stackedWidget_Mode.setCurrentIndex(self.ui.comboBox_mode.currentIndex())        
         if self.ui.stackedWidget_Mode.currentIndex() == 0:
             CONTROL.TESTING = False
+            self.predictor_result.threadon = 0
+            self.ui.label_result.setText('')
+            self.ui.label_action.setText('')
         if self.ui.stackedWidget_Mode.currentIndex() == 1:
             CONTROL.TESTING = True
+            self.predictor_result.threadon = 1
+            self.ui.label_result.setText('')
+            self.ui.label_action.setText('')
 
+    def arrays_equal(self,arr1,arr2):
+        if len(arr1) != len(arr2):
+            return 0
+        for i in range(len(arr1)):
+            if arr1[i] not in arr2:
+                return 0
+        for i in range(len(arr2)):
+            if arr2[i] not in arr1:
+                return 0
+        return 1
+    
     def timer_callback(self):
         names = self.getnames('./persondata')
-        if names != self.allname:
+        current_person = self.ui.comboBox_chooseperson.currentText()
+        if not self.arrays_equal(names,self.allname):
+            print("存在姓名更改")
             self.ui.comboBox_chooseperson.clear()
             for per_name in names:
                 self.ui.comboBox_chooseperson.addItem(per_name)
+            if current_person in names:
+                self.ui.comboBox_chooseperson.setCurrentText(current_person)
         self.allname = names
-
-        if self.ui.stackedWidget_Mode.currentIndex() == 1:  # 推理模式
-            pass
-
+        
 
         
     def click_pushButton_opencom(self):
@@ -190,6 +236,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             SOCKET.SERVER_PORT = args.port
             myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
             self.ui.pushButton_opencom.setEnabled(0)
+            self.iscomconnect = 1
         except Exception as e:
             QMessageBox.information(self, "提示","串口连接失败")
         
@@ -199,14 +246,25 @@ class MyMainWindow(QtWidgets.QMainWindow):
         os.system("explorer.exe %s" % start_directory)
 
     def click_pushButton_show(self):
+        if self.iscomconnect == 0:
+            QMessageBox.information(self, "提示", "请打开串口!")
+            return
         self.ui.pushButton_show.setEnabled(False)
 
-        jobs = [message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR, self.predictor_result.get_action]
+        jobs = [message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR]
         for job in jobs:
             t = threading.Thread(target=job,)
             t.daemon = True
             t.start()
+
+        t_predice = threading.Thread(target=self.predictor_result.get_action,)
+        t_predice.daemon = True
+        t_predice.start()
+        self.predictor_result.threadon = 0
+        
         self.iscomdata = 1
+
+        
 
     def clickpushButton_add(self):
         name, ok = QInputDialog.getText(self, '新增测试人员', '请输入您的名字:')
@@ -231,20 +289,49 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 folders.append(item)
         return folders
 
-    def get_savetype(self):
-            button = QMessageBox.question(self, "提示", "是否保存")
-            if button == QMessageBox.StandardButton.Yes:
-                person_name = self.ui.comboBox_chooseperson.currentText()
-                table_pos = self.ui.comboBox_chooseposition.currentText()
-                person_pos = self.ui.comboBox_choosemode.currentText()
-                sceneroot = pl.Path('./persondata') / pl.Path('./' + person_name)/pl.Path('./' + table_pos) / pl.Path('./' + person_pos)
-                timestamp = int(time.time())
-                filename = f'{timestamp}'
-                os.makedirs(sceneroot, exist_ok=True)
-                return [1,filename, sceneroot]
-            else:
-                return False
+    
 
+    def get_savepath_personal(self,filename):
+        button = QMessageBox.question(self, "提示", "是否保存")
+        if button == QMessageBox.StandardButton.Yes:
+            person_name = self.ui.comboBox_chooseperson.currentText()
+            table_pos = self.ui.comboBox_chooseposition.currentText()
+            person_pos = self.ui.comboBox_choosemode.currentText()
+            sceneroot = pl.Path('./persondata') / pl.Path('./' + person_name)/pl.Path('./' + table_pos) / pl.Path('./' + person_pos)
+            
+            os.makedirs(sceneroot, exist_ok=True)
+            return [1,filename, sceneroot]
+        else:
+            return False
+
+    def get_savepath_training(self,filename):
+        person_name = self.ui.comboBox_chooseperson.currentText()
+        table_pos = self.ui.comboBox_chooseposition.currentText()
+        person_pos = self.ui.comboBox_choosemode.currentText()
+        save_path2 = ""
+        if table_pos == "高位" and person_pos == "无人":
+            save_path2 = "high-position-nobody"
+        if table_pos == "高位" and person_pos == "站姿":
+            save_path2 = "high-position-stand"
+        if table_pos == "高位" and person_pos == "站姿到坐姿":
+            save_path2 = "high-positon-stand2sit"                    
+        if table_pos == "高位" and person_pos == "坐姿":
+            save_path2 = "high-position-sit"
+        if table_pos == "高位" and person_pos == "坐姿到站姿":
+            save_path2 = "high-position-sit2stand"        
+        if table_pos == "低位" and person_pos == "无人":
+            save_path2 = "low-position-nobody"
+        if table_pos == "低位" and person_pos == "站姿":
+            save_path2 = "low-position-stand"
+        if table_pos == "低位" and person_pos == "站姿到坐姿":
+            save_path2 = "low-positon-stand2sit"
+        if table_pos == "低位" and person_pos == "坐姿":
+            save_path2 = "low-position-sit"
+        if table_pos == "低位" and person_pos == "坐姿到站姿":
+            save_path2 = "low-position-sit2stand"
+
+        trainroot = pl.Path('./data')/ pl.Path('./' + save_path2)
+        return [1,filename, trainroot]
 
     def clickpushButton_start(self):
         if self.issaving == 0:
@@ -264,24 +351,42 @@ class MyMainWindow(QtWidgets.QMainWindow):
             CONTROL.RECORDING = 1
             print(f'recording now {CONTROL.RECORDING}')
             self.issaving = 1
-            self.ui.pushButton_start.setText("停止记录")
+            # self.ui.pushButton_start.setText("停止记录")
+            self.secondSec = 0
+            self.caltimer.start()
         else:
+            self.caltimer.stop()
             CONTROL.RECORDING = 0
             if not CONTROL.RECORDING and len(self.ir_data_collector.IR_imgs) > 0:
-                save_args = self.get_savetype()
-                if save_args is False:
+                timestamp = int(time.time())
+                person_name = self.ui.comboBox_chooseperson.currentText()
+                table_pos = self.ui.comboBox_chooseposition.currentText()
+                person_pos = self.ui.comboBox_choosemode.currentText()
+                file_name = person_name + "_" + table_pos + "_" + person_pos + "_" +f'{timestamp}'
+
+                save_args1 = self.get_savepath_personal(file_name)
+                save_args2 = self.get_savepath_training(file_name)
+                if save_args1 is False:
                     # discard data
                     self.ir_data_collector.clear_buffer()
                     self.sonic_data_collector.clear_buffer()
                 else:
-                    self.ir_data_collector.save_data(*save_args)
-                    self.sonic_data_collector.save_data(*save_args)
-                    CONTROL.update_lastround(save_args)
+                    self.ir_data_collector.save_data(*save_args1)
+                    print(0)
+                    self.sonic_data_collector.save_data(*save_args1)
+                    print(1)
+                    self.ir_data_collector.save_data(*save_args2)
+                    self.sonic_data_collector.save_data(*save_args2)
+                    self.ir_data_collector.clear_buffer()
+                    self.sonic_data_collector.clear_buffer()          
+
+                    # CONTROL.update_lastround(save_args)
             self.ui.comboBox_chooseperson.setEnabled(1)
             self.ui.comboBox_chooseposition.setEnabled(1)
             self.ui.comboBox_choosemode.setEnabled(1)
             self.issaving = 0
             self.ui.pushButton_start.setText("开始记录")
+            
 
 
     def update_distance_display(self, distance):
@@ -328,13 +433,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-    
-    # try:
-    #     main()
-    # except Exception as e:
-        # traceback.print_exc()
-        # myserial.portClose()
-
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = MyMainWindow()
     mainWindow.show()

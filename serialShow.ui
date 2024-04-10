@@ -31,15 +31,21 @@
   <property name="windowTitle">
    <string>红外+超声数据采集</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
      <widget class="QWidget" name="widget_4" native="true">
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
       <layout class="QGridLayout" name="gridLayout_7" rowstretch="1,18">
        <item row="1" column="0">
         <widget class="QStackedWidget" name="stackedWidget_Mode">
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="stackedWidget_4Page1">
           <layout class="QGridLayout" name="gridLayout" rowstretch="1,6,1" rowminimumheight="1,2,3">
@@ -48,7 +54,7 @@
            </property>
            <item row="0" column="0">
             <widget class="QWidget" name="widget_7" native="true">
-             <layout class="QGridLayout" name="gridLayout_5">
+             <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1">
               <property name="leftMargin">
                <number>10</number>
               </property>
@@ -67,18 +73,6 @@
               <property name="verticalSpacing">
                <number>0</number>
               </property>
-              <item row="0" column="1">
-               <widget class="QPushButton" name="pushButton_addperson">
-                <property name="font">
-                 <font>
-                  <pointsize>15</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>新增人员</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="0">
                <widget class="QPushButton" name="pushButton_quickopen">
                 <property name="font">
@@ -91,11 +85,26 @@
                 </property>
                </widget>
               </item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="pushButton_addperson">
+                <property name="font">
+                 <font>
+                  <pointsize>15</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>新增人员</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
            <item row="1" column="0">
             <widget class="QWidget" name="widget_5" native="true">
+             <property name="styleSheet">
+              <string notr="true"/>
+             </property>
              <layout class="QGridLayout" name="gridLayout_3">
               <item row="0" column="0">
                <widget class="QLabel" name="label_2">
@@ -147,7 +156,7 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>选择模式：</string>
+                 <string>选择姿态：</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -387,6 +396,13 @@
      </widget>
     </item>
     <item>
+     <widget class="Line" name="line">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QWidget" name="widget_2" native="true">
       <property name="minimumSize">
        <size>
@@ -412,29 +428,11 @@
        </property>
        <item>
         <widget class="QWidget" name="widget_8" native="true">
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_show">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>34</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>显示数据</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1">
+          <item>
            <widget class="QPushButton" name="pushButton_opencom">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -452,6 +450,30 @@
             </property>
             <property name="text">
              <string>打开串口</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_show">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>34</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>15</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>显示数据</string>
             </property>
            </widget>
           </item>
@@ -510,6 +532,8 @@
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="pics.qrc"/>
+ </resources>
  <connections/>
 </ui>
