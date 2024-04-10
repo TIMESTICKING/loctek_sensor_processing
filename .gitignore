@@ -1,0 +1,13 @@
+data/
+data_v2/
+**/__pycache__/
+persondata/fef/低位/坐姿/1712477692.csv
+persondata/fef/低位/坐姿/1712477692.mat
+persondata/fef/低位/坐姿/1712477692.mp4
+persondata/徐晟/高位/站姿到坐姿/1712478938.csv
+persondata/徐晟/高位/站姿到坐姿/1712478938.mat
+persondata/徐晟/高位/站姿到坐姿/1712478938.mp4
+persondata/一/高位/站姿到坐姿/1712478947.csv
+persondata/一/高位/站姿到坐姿/1712478947.mat
+persondata/一/高位/站姿到坐姿/1712478947.mp4
+models/wrongs
