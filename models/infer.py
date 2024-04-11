@@ -7,6 +7,56 @@ from comps.utils import *
 import collections
 from PyQt6.QtCore import QObject, pyqtSignal
 
+class TableControl:
+    def __init__(self):
+        self.table_state = 0  # 0: Low, 1: High
+        self.prev_pose = None
+        self.stable_counter = 0
+        self.stability_threshold = 3  # Number of consecutive frames required for stability
+
+    def control_action(self, current_pose):
+        action = 1  # Default action: 'no movement'
+
+        if self.table_state == 0:  # Low state
+            if current_pose in [0, 1, 4]:
+                action = 1  # 'no movement'
+            elif current_pose == 3:
+                if self.prev_pose == 2:
+                    action = 2  # 'rise'
+                elif self.prev_pose == 3:
+                    self.stable_counter += 1
+                    if self.stable_counter >= self.stability_threshold:
+                        action = 2  # 'rise' after stability
+                else:
+                    self.stable_counter = 0
+            else:
+                self.stable_counter = 0
+
+        elif self.table_state == 1:  # High state
+            if current_pose in [0, 2, 3]:
+                action = 1  # 'no movement'
+            elif current_pose == 1:
+                if self.prev_pose == 4:
+                    action = 0  # 'lower'
+                elif self.prev_pose == 1:
+                    self.stable_counter += 1
+                    if self.stable_counter >= self.stability_threshold:
+                        action = 1  # 'lower' after stability
+                else:
+                    self.stable_counter = 0
+            else:
+                self.stable_counter = 0
+
+        # # Update the table state based on the action
+        # if action == 1:
+        #     self.table_state = 1
+        # elif action == 2:
+        #     self.table_state = 0
+
+        self.prev_pose = current_pose
+        return action
+
+
 class MyInference(QObject):
     predict_result_signal = pyqtSignal(list)
     def __init__(self) -> None:
@@ -18,14 +68,18 @@ class MyInference(QObject):
         self.load_network_low_position('models/checkpoints_v2/low/AllData_v2_balanced_0d86.pth')
         self.load_network_high_position('models\checkpoints_v2\high\AllData_v2_balanced_0d90.pth')
 
+        # table control state machine
+        self.table_controller = TableControl()
+
         # default model is none, you need to specify one
         self.net: MyMLP = None 
         self.position = 0
 
         self.label = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
         self.action = ['下降', '不动', '升起']
-        self.label_filter_size = 8
-        self.predicted_label_raw = collections.deque(maxlen=self.label_filter_size)
+
+        self.predicted_label_q = collections.deque(maxlen=10)
+        self.predicted_action_q = collections.deque(maxlen=5)
 
     def load_network_low_position(self, path):
         """给低位网络模型加载参数
@@ -51,6 +105,7 @@ class MyInference(QObject):
             position (int): 0低位， 1高位. Defaults to 0.
         """        
         self.position = position
+        self.table_controller.table_state = position
         self.net = self.low_net if position == 0 else self.high_net
 
     @torch.no_grad()
@@ -63,7 +118,11 @@ class MyInference(QObject):
 
         _, predicted = torch.max(outputs.data, 1)
 
-        return outputs.numpy(), self.label[predicted]
+        return outputs.numpy(), predicted
+    
+
+    def _filter_action(self, label, position):
+        pass
 
 
     def get_action(self):
@@ -79,24 +138,21 @@ class MyInference(QObject):
 
                 label_raw, label = self.get_label(IR_data, distance_data)
                 # push into the queue
-                self.predicted_label_raw.append(label_raw)
+                self.predicted_label_q.append(label[0])
                 # apply mean filter to the results in window size of 8
-                mean_predicted_label_raw = np.mean(np.stack(self.predicted_label_raw), axis=0)
-                filtered_label = int(np.argmax(mean_predicted_label_raw, 1))
+                mode_filtered_label = np.argmax(np.bincount(self.predicted_label_q))
+                # filtered_label = mode_predicted_label # int(np.argmax(mode_predicted_label, 1))
 
                 # get the action of the table from label and table position
-                action = 0
-                if self.position == 0:
-                    action = 1 if filtered_label in [0, 1, 4] else 2
-                else:
-                    action = 1 if filtered_label in [0, 2, 3] else 0
+                action = self.table_controller.control_action(mode_filtered_label)
 
-                print(self.label[filtered_label], self.action[action])
+                # filter the action
+                self.predicted_action_q.append(action)
+                mode_predicted_action = np.argmax(np.bincount(self.predicted_action_q))
 
-                result = []
-                result.append(self.label[filtered_label])
-                result.append(self.action[action])
-                self.predict_result_signal.emit(result)
+                # output the results
+                print(self.label[mode_filtered_label], self.action[mode_predicted_action])
+                self.predict_result_signal.emit([self.label[mode_filtered_label], self.action[mode_predicted_action]])
                 
                 time.sleep(0.1)
             else:
