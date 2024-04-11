@@ -164,7 +164,7 @@
                </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QComboBox" name="comboBox_choosemode">
+               <widget class="QComboBox" name="comboBox_chooseposture">
                 <property name="font">
                  <font>
                   <pointsize>15</pointsize>
@@ -219,7 +219,7 @@
             <widget class="QWidget" name="widget_10" native="true">
              <layout class="QGridLayout" name="gridLayout_10">
               <item row="0" column="1">
-               <widget class="QComboBox" name="comboBox_2">
+               <widget class="QComboBox" name="comboBox_predictPos">
                 <property name="font">
                  <font>
                   <pointsize>15</pointsize>
