@@ -30,7 +30,7 @@ def nearest_neighbor_interpolate_and_analyze(arr):
     return (False, None)
 
 # 示例数组
-array_example = np.array([90, 55, 75, 104, 50, 60, 103])
+array_example = np.array([38000, 38000])
 
 # 使用函数
 result = nearest_neighbor_interpolate_and_analyze(array_example)
