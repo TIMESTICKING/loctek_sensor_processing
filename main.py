@@ -452,10 +452,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.label_result.setText('不确定')
         elif result[0] == 'stand2sit':
             self.ui.label_result.setText('站姿---坐姿')
-
+        
         self.ui.label_action.setText(result[1])
         
-
         plt.ion() 
         plt.clf()
         plt.figure(1)

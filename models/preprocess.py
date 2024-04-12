@@ -20,7 +20,7 @@ def scale_IR(dataset):
     return scaled_tensor, max_val, min_val
 
 
-def nearest_neighbor_interpolate_and_analyze(arr, mean_thresh=70, var_thresh=45):
+def nearest_neighbor_interpolate_and_analyze(arr, pos, mean_thresh_low=85, mean_thresh_high=100, var_thresh=45):
     # 找出不需要插值的索引和对应的值
     valid_indices = np.where(arr != 38000)[0]
     valid_values = arr[valid_indices]
@@ -38,7 +38,10 @@ def nearest_neighbor_interpolate_and_analyze(arr, mean_thresh=70, var_thresh=45)
     # print(arr)
 
     # 检查总体数值是否大于70
-    if np.mean(arr) > mean_thresh:
+    if np.mean(arr) > mean_thresh_low and pos == 0:
+        return (True, 0)
+
+    if np.mean(arr) > mean_thresh_high and pos == 1:
         return (True, 0)
 
     # 检查总体方差是否过大（这里方差阈值设为45，可调整）

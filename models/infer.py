@@ -23,7 +23,7 @@ class TableControl:
             if current_pose in [-1, 0, 1, 4]:
                 action = 1  # 'no movement'
             elif current_pose == 3:
-                if self.prev_pose == 2:
+                if self.prev_pose in [2, -1]:
                     action = 2  # 'rise'
                 elif self.prev_pose == 3:
                     self.stable_counter += 1
@@ -38,7 +38,7 @@ class TableControl:
             if current_pose in [-1, 0, 2, 3]:
                 action = 1  # 'no movement'
             elif current_pose == 1:
-                if self.prev_pose == 4:
+                if self.prev_pose == [4, -1]:
                     action = 0  # 'lower'
                 elif self.prev_pose == 1:
                     self.stable_counter += 1
@@ -82,7 +82,9 @@ class MyInference(QObject):
         self.action = ['下降', '不动', '升起']
 
         self.predicted_label_q = collections.deque(maxlen=5)
+        self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_action_q = collections.deque(maxlen=5)
+        self.threadon = 0
 
     def load_network_low_position(self, path):
         """给低位网络模型加载参数
@@ -138,7 +140,7 @@ class MyInference(QObject):
     
     def _pre_decision(self, IR, distance):
         '''first deals distance'''
-        res = nearest_neighbor_interpolate_and_analyze(distance, 85, 45)
+        res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 45)
 
         return res
             
@@ -150,7 +152,7 @@ class MyInference(QObject):
             print("请调用 set_table_position(position=<int 0 or 1>) 来设置当前桌子的高低")
             time.sleep(2)
         while True:
-            if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
+            if self.threadon == 1 and len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
                 '''predecision'''
                 IR_data = np.array(MESSAGE.IR_net_ready)
                 distance_data = np.array(MESSAGE.sonic_net_ready, dtype=np.float32)
@@ -158,9 +160,6 @@ class MyInference(QObject):
                     judged, label = self._pre_decision(IR_data, distance_data)
                 else:
                     judged = False
-
-
-
 
                 if not judged:
                     '''data process'''
