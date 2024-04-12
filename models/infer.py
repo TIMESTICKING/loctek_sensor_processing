@@ -80,8 +80,8 @@ class MyInference(QObject):
 
         self.predicted_label_q = collections.deque(maxlen=10)
         self.predicted_action_q = collections.deque(maxlen=5)
-        self.label_filter_size = 8
-        self.predicted_label_raw = collections.deque(maxlen=self.label_filter_size)
+        # self.label_filter_size = 8
+        # self.predicted_label_raw = collections.deque(maxlen=self.label_filter_size)
         self.threadon = 0
 
     def load_network_low_position(self, path):
@@ -155,7 +155,7 @@ class MyInference(QObject):
 
                 # output the results
                 print(self.label[mode_filtered_label], self.action[mode_predicted_action])
-                self.predict_result_signal.emit([self.label[mode_filtered_label], self.action[mode_predicted_action]])
+                self.predict_result_signal.emit([self.label[mode_filtered_label], self.action[mode_predicted_action],label_raw])
                 
                 time.sleep(0.1)
             else:

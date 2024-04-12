@@ -7,17 +7,27 @@ from comps.IRdataCollect import *
 from comps.SonicDataCollect import *
 from my_socket import server
 from argparse import ArgumentParser
+import math
 import sys
 from PyQt6 import QtWidgets
 from Ui_serialShow import Ui_SerialShow
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog
+from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog,QWidget
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 import serial.tools.list_ports
 from models.infer import MyInference
-import io
-
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FC
+from matplotlib import pyplot as plt
+from matplotlib.figure import Figure
+from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QVBoxLayout
+from PyQt6.QtWidgets import QHBoxLayout
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtWidgets import QDialog
+from PyQt6.QtGui import QIcon
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 myserial = None
 
 
@@ -69,6 +79,8 @@ def key_handler():
             break
 
 
+       
+
 # 主界面类
 class MyMainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -117,7 +129,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         SCENETYPEPos=['低位','高位']
         SCENETYPEModes = \
             ['坐姿'
+            ,'其他坐姿'
             , '站姿'
+            ,'其他站姿'
             , '坐姿到站姿'
             , '站姿到坐姿'
             , '无人']
@@ -141,18 +155,22 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.caltimer.setInterval(100)
         self.caltimer.timeout.connect(self.onTimerOut)
 
-        
+       
         self.issaving = 0                                        # 是否正在记录，默认为否
         self.ui.stackedWidget_Mode.setCurrentIndex(0)            # 默认为采集模式   
         self.ui.comboBox_predictPos.setCurrentIndex(0)           # 默认桌子为低位
         self.predictor_result.set_table_position(0)              # 默认桌子为低位
-        self.wordThreads = []                                    # 工作线程
+        self.wordThreads = []  
+        self.predict_pos = []
 
     # 刷新记录时间
     def onTimerOut(self):
         self.secondSec+=1
         self.ui.pushButton_start.setText("停止记录:"+str(self.secondSec/10.0)+"s")
 
+
+        
+        
 
     def keyPressEvent(self, keyevent):        
         current_mode = self.ui.comboBox_chooseposture.currentIndex()
@@ -182,11 +200,17 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.predictor_result.threadon = 0
             self.ui.label_result.setText('')
             self.ui.label_action.setText('')
+            
+                
         if self.ui.stackedWidget_Mode.currentIndex() == 1:
             CONTROL.TESTING = True
             self.predictor_result.threadon = 1
             self.ui.label_result.setText('')
-            self.ui.label_action.setText('')
+            self.ui.label_action.setText('')     
+
+                      
+            
+
     # 选择姿态
     def on_chooseposture_changed(self,text):
         self.setFocus()
@@ -330,6 +354,14 @@ class MyMainWindow(QtWidgets.QMainWindow):
             save_path2 = "low-position-sit"
         if table_pos == "低位" and person_pos == "坐姿到站姿":
             save_path2 = "low-position-sit2stand"
+        if table_pos == "低位" and person_pos == "其他坐姿":
+            save_path2 = "low-position-otheresit"
+        if table_pos == "高位" and person_pos == "其他坐姿":
+            save_path2 = "high-position-othersit"
+        if table_pos == "低位" and person_pos == "其他站姿":
+            save_path2 = "low-position-otherestand"
+        if table_pos == "高位" and person_pos == "其他站姿":
+            save_path2 = "high-position-otherestand"
 
         trainroot = pl.Path('./data')/ pl.Path('./' + save_path2)
         return [1,filename, trainroot]
@@ -419,6 +451,19 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.label_result.setText('站姿---坐姿')
 
         self.ui.label_action.setText(result[1])
+        self.predict_pos = result[2][0]
+
+        plt.ion() 
+        plt.clf()
+        plt.figure(1)
+        plt.ylim(0,1)
+        x = ['idle','sit','sit2stand','stand','stand2sit']        
+        plt.plot(x,self.predict_pos,'g-.o')
+        plt.show()
+        
+        
+          
+
 
     # IRDataCollect数据传输
     def update_heatmap_display(self,heatmap):
@@ -434,10 +479,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.IR_showLabel.show()
 
 
-
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = MyMainWindow()
     mainWindow.show()
     sys.exit(app.exec())
-
