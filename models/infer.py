@@ -138,7 +138,7 @@ class MyInference(QObject):
     
     def _pre_decision(self, IR, distance):
         '''first deals distance'''
-        res = nearest_neighbor_interpolate_and_analyze(distance, 70, 45)
+        res = nearest_neighbor_interpolate_and_analyze(distance, 85, 45)
 
         return res
             
