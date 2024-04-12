@@ -26,7 +26,11 @@ def nearest_neighbor_interpolate_and_analyze(arr, pos, mean_thresh_low=85, mean_
     valid_values = arr[valid_indices]
 
     # 创建最近邻插值函数
-    interp_func = interp1d(valid_indices, valid_values, kind='nearest', fill_value="extrapolate")
+    try:
+        interp_func = interp1d(valid_indices, valid_values, kind='nearest', fill_value="extrapolate")
+    except Exception as e:
+        # all data is 38000
+        return (True, 0)
     
     # 找出需要插值的索引
     indices_to_interpolate = np.where(arr == 38000)[0]
