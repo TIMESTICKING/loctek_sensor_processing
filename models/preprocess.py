@@ -5,6 +5,7 @@ import scipy.io
 import glob
 from scipy.ndimage import minimum_filter
 import torch
+from scipy.interpolate import interp1d
 
 
 DATA_TYPE = 'all'
@@ -18,6 +19,34 @@ def scale_IR(dataset):
     scaled_tensor = (tensor - min_val) / (max_val - min_val)
     return scaled_tensor, max_val, min_val
 
+
+def nearest_neighbor_interpolate_and_analyze(arr, mean_thresh=70, var_thresh=45):
+    # 找出不需要插值的索引和对应的值
+    valid_indices = np.where(arr != 38000)[0]
+    valid_values = arr[valid_indices]
+
+    # 创建最近邻插值函数
+    interp_func = interp1d(valid_indices, valid_values, kind='nearest', fill_value="extrapolate")
+    
+    # 找出需要插值的索引
+    indices_to_interpolate = np.where(arr == 38000)[0]
+
+    # 进行插值
+    if len(indices_to_interpolate) > 0:
+        arr[indices_to_interpolate] = interp_func(indices_to_interpolate)
+    
+    # print(arr)
+
+    # 检查总体数值是否大于70
+    if np.mean(arr) > mean_thresh:
+        return (True, 0)
+
+    # 检查总体方差是否过大（这里方差阈值设为45，可调整）
+    if np.var(arr) > var_thresh:
+        return (True, -1)
+
+    # 如果以上条件都不满足，返回(False, None)
+    return (False, None)
 
 
 def distance_preprocess(distances):

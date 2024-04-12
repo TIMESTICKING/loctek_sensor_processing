@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,6 +7,7 @@ from models.model import *
 from comps.utils import *
 import collections
 from PyQt6.QtCore import QObject, pyqtSignal
+from scipy import stats
 
 class TableControl:
     def __init__(self):
@@ -18,7 +20,7 @@ class TableControl:
         action = 1  # Default action: 'no movement'
 
         if self.table_state == 0:  # Low state
-            if current_pose in [0, 1, 4]:
+            if current_pose in [-1, 0, 1, 4]:
                 action = 1  # 'no movement'
             elif current_pose == 3:
                 if self.prev_pose == 2:
@@ -33,7 +35,7 @@ class TableControl:
                 self.stable_counter = 0
 
         elif self.table_state == 1:  # High state
-            if current_pose in [0, 2, 3]:
+            if current_pose in [-1, 0, 2, 3]:
                 action = 1  # 'no movement'
             elif current_pose == 1:
                 if self.prev_pose == 4:
@@ -41,7 +43,7 @@ class TableControl:
                 elif self.prev_pose == 1:
                     self.stable_counter += 1
                     if self.stable_counter >= self.stability_threshold:
-                        action = 1  # 'lower' after stability
+                        action = 0  # 'lower' after stability
                 else:
                     self.stable_counter = 0
             else:
@@ -74,8 +76,9 @@ class MyInference(QObject):
         # default model is none, you need to specify one
         self.net: MyMLP = None 
         self.position = 0
+        self.filter_mode = True
 
-        self.label = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
+        self.label = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit', 'not sure']
         self.action = ['下降', '不动', '升起']
 
         self.predicted_label_q = collections.deque(maxlen=10)
@@ -98,6 +101,13 @@ class MyInference(QObject):
         self.high_net.load_state_dict(torch.load(os.path.normpath(path), map_location=mydevice))
 
 
+    def filter_mode_on(self):
+        self.filter_mode = True
+
+    def filter_mode_off(self):
+        self.filter_mode = False
+
+
     def set_table_position(self, position=0):
         """设置桌子的位置
 
@@ -116,14 +126,22 @@ class MyInference(QObject):
         outputs = self.net(IR_data, distance_data)
         outputs = outputs.cpu()
 
-        _, predicted = torch.max(outputs.data, 1)
+        # _, predicted = torch.max(outputs.data, 1)
 
-        return outputs.numpy(), predicted
+        return outputs
     
 
-    def _filter_action(self, label, position):
-        pass
+    def _label_deambiguity(self, label_raw):
+        posibility, label = torch.max(label_raw, 1)
+        return label.tolist()[0] if posibility >= 0.8 else -1
+    
+    
+    def _pre_decision(self, IR, distance):
+        '''first deals distance'''
+        res = nearest_neighbor_interpolate_and_analyze(distance, 70, 45)
 
+        return res
+            
 
     def get_action(self):
         """Get the predicted label and the action of the table
@@ -133,26 +151,54 @@ class MyInference(QObject):
             time.sleep(2)
         while True:
             if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
-                IR_data, _, _ = scale_IR(np.array(MESSAGE.IR_net_ready))
-                distance_data = torch.from_numpy(distance_preprocess(np.array(MESSAGE.sonic_net_ready, dtype=np.float32)))
+                '''predecision'''
+                IR_data = np.array(MESSAGE.IR_net_ready)
+                distance_data = np.array(MESSAGE.sonic_net_ready, dtype=np.float32)
+                if self.filter_mode:
+                    judged, label = self._pre_decision(IR_data, distance_data)
+                else:
+                    judged = False
 
-                label_raw, label = self.get_label(IR_data, distance_data)
-                # push into the queue
-                self.predicted_label_q.append(label[0])
-                # apply mean filter to the results in window size of 8
-                mode_filtered_label = np.argmax(np.bincount(self.predicted_label_q))
-                # filtered_label = mode_predicted_label # int(np.argmax(mode_predicted_label, 1))
 
-                # get the action of the table from label and table position
-                action = self.table_controller.control_action(mode_filtered_label)
 
-                # filter the action
-                self.predicted_action_q.append(action)
-                mode_predicted_action = np.argmax(np.bincount(self.predicted_action_q))
 
-                # output the results
-                print(self.label[mode_filtered_label], self.action[mode_predicted_action])
-                self.predict_result_signal.emit([self.label[mode_filtered_label], self.action[mode_predicted_action]])
+                if not judged:
+                    '''data process'''
+                    IR_data, _, _ = scale_IR(IR_data)
+                    distance_data = torch.from_numpy(distance_preprocess(distance_data))
+
+                    '''inference'''
+                    label_raw = self.get_label(IR_data, distance_data)
+                    label = self._label_deambiguity(label_raw)
+                    
+
+
+                if self.filter_mode:
+                    '''mode filter label'''
+                    # push into the queue
+                    self.predicted_label_q.append(label)
+                    # 计算众数
+                    label, count = stats.mode(self.predicted_label_q)
+                    # filtered_label = mode_predicted_label # int(np.argmax(mode_predicted_label, 1))
+
+                    '''state machine of action'''
+                    # get the action of the table from label and table position
+                    action = self.table_controller.control_action(label)
+                else:
+                    action = 0
+                    if self.position == 0:
+                        action = 1 if label in [0, 1, 4] else 2
+                    else:
+                        action = 1 if label in [0, 2, 3] else 0
+
+                '''filter the action'''
+                # self.predicted_action_q.append(action)
+                # mode_predicted_action = np.argmax(np.bincount(self.predicted_action_q))
+
+                # print the possibilities
+                # np.set_printoptions(precision=2, suppress=True)
+                print(self.label[label], self.action[action]) # label_raw.numpy(), 
+                self.predict_result_signal.emit([self.label[label], self.action[action]])
                 
                 time.sleep(0.1)
             else:
