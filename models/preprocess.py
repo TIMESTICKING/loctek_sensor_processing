@@ -90,8 +90,12 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
             f'{_pre}-position-nobody',
             # f'{_pre}-position-passenger',
             f'{_pre}-position-sit',
-            f'{_pre}-position-stand'
+            f'{_pre}-position-stand',
+            f'{_pre}-position-otheresit',
+            f'{_pre}-position-otherestand'
         ]
+        if pre_keywords.startswith('high'):
+            folders = folders[:-2]
 
     # Prepare to collect data and labels
     filename_dataset = []
@@ -99,9 +103,9 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
     IR_dataset = []
     groudtruth = []
     if DATA_TYPE == 'all':
-        labels = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit']
+        labels = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit', 'otheresit', 'otherestand']
     else:
-        labels = ['idle', 'sit', 'stand']
+        labels = ['idle', 'sit', 'stand', 'otheresit', 'otherestand']
 
     # Process each folder
     for folder in folders:
@@ -244,7 +248,7 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    datasets = load_preprocess(data_dir='../data_v2', pre_keywords='high-posi*')
+    datasets = load_preprocess(data_dir='../data_eccentric', pre_keywords='low-posi*')
     # 准备训练集
     train_dataset, test_dataset = prepare_datasets(datasets, 0.8, 14, 9)
 
