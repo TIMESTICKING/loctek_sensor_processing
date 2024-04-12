@@ -68,36 +68,6 @@ def key_handler():
         elif key == ord('q'):
             break
 
-        # elif key == 27:
-        #     # esc, to re-save the last round file to another directory
-        #     args = CONTROL.get_scenetype()
-        #     if args is False:
-        #         # discard data
-        #         DEVICE.IR_data_collector.clear_buffer()
-        #         DEVICE.sonic_device1.clear_buffer()
-        #     else:
-        #         new_filename = CONTROL.last_filename.replace(CONTROL.last_scenetype, args[0])
-        #         args[1] = new_filename
-        #
-        #         DEVICE.IR_data_collector.resave_data(*args)
-        #         DEVICE.sonic_device1.resave_data(*args)
-        #         # save some parameters to instance
-        #         CONTROL.update_lastround(args)
-        #         # another change for re-saving the files
-        #         print("上一轮的存储是否想改变主意？按下ESC以重新保存，否则请忽略。")
-
-
-
-# def main():
-#     jobs = [server.start_server, message_classify, DEVICE.sonic_device1.play_sonic, DEVICE.IR_data_collector.play_IR, DEVICE.predictor.get_action]
-#     my_threads = []
-#     for job in jobs:
-#         t = threading.Thread(target=job,)
-#         my_threads.append(t)
-#         t.daemon = True
-#         t.start()
-#     print(f'System started with {len(jobs)} threads.')
-#     key_handler()
 
 # 主界面类
 class MyMainWindow(QtWidgets.QMainWindow):
@@ -178,26 +148,24 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.predictor_result.set_table_position(0)              # 默认桌子为低位
         self.wordThreads = []                                    # 工作线程
 
-    # 刷新记录时间计时
+    # 刷新记录时间
     def onTimerOut(self):
         self.secondSec+=1
         self.ui.pushButton_start.setText("停止记录:"+str(self.secondSec/10.0)+"s")
 
-        
 
-    def keyPressEvent(self, keyevent):
+    def keyPressEvent(self, keyevent):        
+        current_mode = self.ui.comboBox_chooseposture.currentIndex()
         if keyevent.key() == Qt.Key.Key_Space or keyevent.key() == Qt.Key.Key_Return:
-            print("click space : start or stop recording!")
-            self.clickpushButton_start()
-        
-        current_mode = self.ui.comboBox_choosemode.currentIndex()
-        if keyevent.key() == Qt.Key.Key_Right and current_mode != self.ui.comboBox_choosemode.count() - 1:            
-            self.ui.comboBox_choosemode.setCurrentIndex(current_mode + 1)
-        if keyevent.key() == Qt.Key.Key_Left and current_mode != 0:            
-            self.ui.comboBox_choosemode.setCurrentIndex(current_mode - 1)
-        if keyevent.key() == Qt.Key.Key_Up or keyevent.key() == Qt.Key.Key_Down:      
+            self.clickpushButton_start()        
+        elif  keyevent.key() == Qt.Key.Key_Right and current_mode != self.ui.comboBox_chooseposture.count() - 1:            
+            self.ui.comboBox_chooseposture.setCurrentIndex(current_mode + 1)
+        elif  keyevent.key() == Qt.Key.Key_Left and current_mode != 0:            
+            self.ui.comboBox_chooseposture.setCurrentIndex(current_mode - 1)
+        elif  keyevent.key() == Qt.Key.Key_Up or keyevent.key() == Qt.Key.Key_Down:      
             self.ui.comboBox_chooseposition.setCurrentIndex(not self.ui.comboBox_chooseposition.currentIndex())
-            
+        else:
+            pass
 
     # 选择推理时桌子位置
     def on_tablepos_changed(self, text):
@@ -259,10 +227,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.comboBox_Coms.clear()
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
-            # print(f"串口名称:{port.device}")
-            # print(f"串口描述:{port.description}")
-            # print(f"制造商ID:{port.manufacturer}")
-            # print(f"产品ID:{port.product}")
             self.ui.comboBox_Coms.addItem(f"{port.device}")
 
     # 快速打开保存文件夹
@@ -279,7 +243,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
             global myserial
             parser = ArgumentParser()
             parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
-            print("当前端口为:",self.ui.comboBox_Coms.currentText())
             parser.add_argument('--serial', type=str, default=self.ui.comboBox_Coms.currentText())
             args = parser.parse_args()
             SOCKET.SERVER_PORT = args.port
@@ -335,7 +298,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         if button == QMessageBox.StandardButton.Yes:
             person_name = self.ui.comboBox_chooseperson.currentText()
             table_pos = self.ui.comboBox_chooseposition.currentText()
-            person_pos = self.ui.comboBox_choosemode.currentText()
+            person_pos = self.ui.comboBox_chooseposture.currentText()
             sceneroot = pl.Path('./persondata') / pl.Path('./' + person_name)/pl.Path('./' + table_pos) / pl.Path('./' + person_pos)
             
             os.makedirs(sceneroot, exist_ok=True)
@@ -344,9 +307,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
             return False
 
     def get_savepath_training(self,filename):
-        person_name = self.ui.comboBox_chooseperson.currentText()
         table_pos = self.ui.comboBox_chooseposition.currentText()
-        person_pos = self.ui.comboBox_choosemode.currentText()
+        person_pos = self.ui.comboBox_chooseposture.currentText()
         save_path2 = ""
         if table_pos == "高位" and person_pos == "无人":
             save_path2 = "high-position-nobody"
@@ -375,7 +337,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
     # 开始记录
     def clickpushButton_start(self):
         if self.issaving == 0:
-            if self.ui.comboBox_chooseperson.currentText() and self.ui.comboBox_chooseposition.currentText() and self.ui.comboBox_choosemode.currentText():
+            if self.ui.comboBox_chooseperson.currentText() and self.ui.comboBox_chooseposition.currentText() and self.ui.comboBox_chooseposture.currentText():
                 pass
             else:
                 QMessageBox.information(self, "提示", "请输入保存信息!")
@@ -387,11 +349,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 return
             self.ui.comboBox_chooseperson.setEnabled(0)
             self.ui.comboBox_chooseposition.setEnabled(0)
-            self.ui.comboBox_choosemode.setEnabled(0)
+            self.ui.comboBox_chooseposture.setEnabled(0)
             CONTROL.RECORDING = 1
             print(f'recording now {CONTROL.RECORDING}')
             self.issaving = 1
-            # self.ui.pushButton_start.setText("停止记录")
             self.secondSec = 0
             self.caltimer.start()
         else:
@@ -401,8 +362,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 timestamp = int(time.time())
                 person_name = self.ui.comboBox_chooseperson.currentText()
                 table_pos = self.ui.comboBox_chooseposition.currentText()
-                person_pos = self.ui.comboBox_choosemode.currentText()
-                file_name = person_name + "_" + table_pos + "_" + person_pos + "_" +f'{timestamp}'
+                person_pos = self.ui.comboBox_chooseposture.currentText()
+                file_name = "new" + person_name + "_" + table_pos + "_" + person_pos + "_" +f'{timestamp}'
 
                 save_args1 = self.get_savepath_personal(file_name)
                 save_args2 = self.get_savepath_training(file_name)
@@ -421,7 +382,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                     # CONTROL.update_lastround(save_args)
             self.ui.comboBox_chooseperson.setEnabled(1)
             self.ui.comboBox_chooseposition.setEnabled(1)
-            self.ui.comboBox_choosemode.setEnabled(1)
+            self.ui.comboBox_chooseposture.setEnabled(1)
             self.issaving = 0
             self.ui.pushButton_start.setText("开始记录")
             

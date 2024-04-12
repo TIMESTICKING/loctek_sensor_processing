@@ -146,8 +146,6 @@ class Ui_SerialShow(object):
         self.comboBox_predictPos.setObjectName("comboBox_predictPos")
         self.comboBox_predictPos.addItem("")
         self.comboBox_predictPos.addItem("")
-        self.comboBox_predictPos.addItem("")
-        self.comboBox_predictPos.setItemText(2, "")
         self.gridLayout_10.addWidget(self.comboBox_predictPos, 0, 1, 1, 1)
         self.label_6 = QtWidgets.QLabel(parent=self.widget_10)
         font = QtGui.QFont()
