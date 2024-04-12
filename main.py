@@ -287,9 +287,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         t_predice = threading.Thread(target=self.predictor_result.get_action,)
         t_predice.daemon = True
         t_predice.start()
-        
+
         self.iscomdata = 1
 
+        self.predictor_result.filter_mode_on()
         
     # 新增人员
     def clickpushButton_add(self):
@@ -447,18 +448,20 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.label_result.setText('站姿')
         elif result[0] == 'sit2stand':
             self.ui.label_result.setText('坐姿---站姿')
+        elif result[0] == 'not sure':
+            self.ui.label_result.setText('不确定')
         elif result[0] == 'stand2sit':
             self.ui.label_result.setText('站姿---坐姿')
 
         self.ui.label_action.setText(result[1])
-        self.predict_pos = result[2][0]
+        
 
         plt.ion() 
         plt.clf()
         plt.figure(1)
         plt.ylim(0,1)
         x = ['idle','sit','sit2stand','stand','stand2sit']        
-        plt.plot(x,self.predict_pos,'g-.o')
+        plt.plot(x,result[2][0],'g-.o')
         plt.show()
         
         
