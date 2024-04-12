@@ -23,7 +23,7 @@ class TableControl:
             if current_pose in [-1, 0, 1, 4]:
                 action = 1  # 'no movement'
             elif current_pose == 3:
-                if self.prev_pose == 2:
+                if self.prev_pose in [2, -1]:
                     action = 2  # 'rise'
                 elif self.prev_pose == 3:
                     self.stable_counter += 1
@@ -38,7 +38,7 @@ class TableControl:
             if current_pose in [-1, 0, 2, 3]:
                 action = 1  # 'no movement'
             elif current_pose == 1:
-                if self.prev_pose == 4:
+                if self.prev_pose == [4, -1]:
                     action = 0  # 'lower'
                 elif self.prev_pose == 1:
                     self.stable_counter += 1
@@ -81,7 +81,7 @@ class MyInference(QObject):
         self.label = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit', 'not sure']
         self.action = ['下降', '不动', '升起']
 
-        self.predicted_label_q = collections.deque(maxlen=10)
+        self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_action_q = collections.deque(maxlen=5)
 
     def load_network_low_position(self, path):
@@ -138,7 +138,7 @@ class MyInference(QObject):
     
     def _pre_decision(self, IR, distance):
         '''first deals distance'''
-        res = nearest_neighbor_interpolate_and_analyze(distance, 85, 45)
+        res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 45)
 
         return res
             
