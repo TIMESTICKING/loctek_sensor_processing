@@ -14,7 +14,7 @@ class TableControl:
         self.table_state = 0  # 0: Low, 1: High
         self.prev_pose = None
         self.stable_counter = 0
-        self.stability_threshold = 3  # Number of consecutive frames required for stability
+        self.stability_threshold = 2  # Number of consecutive frames required for stability
 
     def control_action(self, current_pose):
         action = 1  # Default action: 'no movement'
@@ -23,7 +23,7 @@ class TableControl:
             if current_pose in [-1, 0, 1, 4]:
                 action = 1  # 'no movement'
             elif current_pose == 3:
-                if self.prev_pose in [2, -1]:
+                if self.prev_pose in [2]:
                     action = 2  # 'rise'
                 elif self.prev_pose == 3:
                     self.stable_counter += 1
@@ -38,7 +38,7 @@ class TableControl:
             if current_pose in [-1, 0, 2, 3]:
                 action = 1  # 'no movement'
             elif current_pose == 1:
-                if self.prev_pose == [4, -1]:
+                if self.prev_pose in [4]:
                     action = 0  # 'lower'
                 elif self.prev_pose == 1:
                     self.stable_counter += 1
@@ -132,8 +132,11 @@ class MyInference(QObject):
     
 
     def _label_deambiguity(self, label_raw):
-        posibility, label = torch.max(label_raw, 1)
-        return label.tolist()[0] if posibility >= 0.8 else -1
+        '''relax the thresh when movement is predicted'''
+        possibility, label = torch.max(label_raw, 1)
+        possibility_thresh = 0.5 if label in [2, 4] else 0.8
+
+        return label.tolist()[0] if possibility >= possibility_thresh else -1
     
     
     def _pre_decision(self, IR, distance):
