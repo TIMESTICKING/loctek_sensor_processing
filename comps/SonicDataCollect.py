@@ -3,7 +3,7 @@ import shutil
 import struct
 import traceback
 from .utils import *
-from PyQt6.QtCore import QObject,pyqtSignal
+from PyQt5.QtCore import QObject,pyqtSignal
 
 class SonicDataCollect(QObject):
 
@@ -14,17 +14,19 @@ class SonicDataCollect(QObject):
         self.queue = queue
         self.name = name
         self.distances = []
-
+        self.trig_stop = False
+    def stop_thread(self):
+        self.trig_stop = True
     def play_sonic(self):
-        while True:
+        while not self.trig_stop:
             sonic_raw = self.queue.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
             try:
                 float_number = struct.unpack('f', sonic_raw)[0]
                 MESSAGE.sonic_net_ready.append(float_number)
-                
-                if CONTROL.RECORDING or CONTROL.TESTING:      
+
+                if CONTROL.RECORDING or CONTROL.TESTING:
                     self.distances.append(float_number)
 
                 if self.socket is not None and self.socket[1] is not None:

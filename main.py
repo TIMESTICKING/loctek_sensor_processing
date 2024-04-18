@@ -1,34 +1,27 @@
 # -*- coding: utf-8 -*-
 from drivers.Serial import *
 import cv2
-import queue
 from comps.utils import *
 from comps.IRdataCollect import *
 from comps.SonicDataCollect import *
-from my_socket import server
 from argparse import ArgumentParser
-import math
 import sys
-from PyQt6 import QtWidgets
-from Ui_serialShow import Ui_SerialShow
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog,QWidget
-from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from SerialTablePos import TableControl
+from PyQt5 import QtWidgets
+from ConnectDeviceDialog import ConnectDeviceDialog
+from serialShow import Ui_SerialShow
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import QMessageBox,QInputDialog
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+from draw_plot import DrawPlotWidget
 import serial.tools.list_ports
 from models.infer import MyInference
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FC
 from matplotlib import pyplot as plt
-from matplotlib.figure import Figure
-from PyQt6.QtWidgets import QMainWindow
-from PyQt6.QtWidgets import QVBoxLayout
-from PyQt6.QtWidgets import QHBoxLayout
-from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtWidgets import QDialog
-from PyQt6.QtGui import QIcon
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-myserial = None
+
 
 
 
@@ -37,19 +30,72 @@ class DEVICE:
     sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
     predictor = MyInference()
 
+# def plot_show():
+#     try:
+#         if len(CONTROL.label_percent) != 0:
+#             plt.ion()
+#             plt.clf()
+#             plt.figure(1)
+#             plt.ylim(0,1)
+#             x = ['idle','sit','sit2stand','stand','stand2sit']
+#             plt.plot(x,CONTROL.label_percent,'g-.o')
+#             plt.show()
+#         else:
+#             pass
+#     except Exception as e:
+#         traceback.print_exc()
+#
+class MySerial_2head1tail(MySerial):
+    def __init__(self, h2, *args, **kwargs):
+        super(MySerial_2head1tail, self).__init__(*args, **kwargs)
+        # self.frame_len = frame_len
+        self.h2 = h2
+        self.trig_stop = False
+    def stop_thread(self):
+        self.trig_stop = True
+    def readData(self):
+        buf = b''
+        sta = SM2h2t.findinghead1
+        read_cnt = 0
+        max_read = 64 * 10
+        while not self.trig_stop:
+            read_cnt += 1
+            data = self.port.read()
+            # print(data.hex())
+            if len(data) == 0 or read_cnt > max_read:
+                warnings.warn('串口读取超时')
+                self.portClose()
+                break
 
-def message_classify():
-    for res in myserial.readData():
-        # print(res)
-        paras = (res[1:], True, None)
-        try:
-            if res[0] == TAG.IR and not MESSAGE.IR.full():
-                MESSAGE.IR.put(*paras)
-            elif res[0] == TAG.SONIC1 and not MESSAGE.sonic1.full():
-                MESSAGE.sonic1.put(*paras)
-        except Exception as e:
-            traceback.print_exc()
-            break
+            if sta == SM2h2t.findinghead1:
+                if data == self.h:
+                    # buf += data
+                    sta = SM2h2t.findinghead2
+            elif sta == SM2h2t.findinghead2:
+                if data == self.h2:
+                    # buf += data
+                    sta = SM2h2t.findingtail
+            elif sta == SM2h2t.findingtail:
+                if data == self.t and (len(buf) in self.length or self.length is None):
+                    yield buf
+                    read_cnt = 0
+                    buf = b''
+                    sta = SM2h2t.findinghead1
+                else:
+                    buf += data
+
+    def message_classify(self):
+        for res in self.readData():
+                # print(res)
+                paras = (res[1:], True, None)
+                try:
+                    if res[0] == TAG.IR and not MESSAGE.IR.full():
+                        MESSAGE.IR.put(*paras)
+                    elif res[0] == TAG.SONIC1 and not MESSAGE.sonic1.full():
+                        MESSAGE.sonic1.put(*paras)
+                except Exception as e:
+                    traceback.print_exc()
+                    break
 
 
 '''
@@ -79,7 +125,7 @@ def key_handler():
             break
 
 
-       
+
 
 # 主界面类
 class MyMainWindow(QtWidgets.QMainWindow):
@@ -88,7 +134,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui = Ui_SerialShow()
         self.ui.setupUi(self)
         # 检测串口
-        self.ui.pushButton_cleckcoms.clicked.connect(self.click_pushButton_cleckcoms)
+        self.ui.pushButton_checkcoms.clicked.connect(self.click_pushButton_checkcoms)
         # 快速打开保存文件夹
         self.ui.pushButton_quickopen.clicked.connect(self.click_pushButton_quickopen)
         # 显示数据
@@ -107,7 +153,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         # MyInference初始化与信号槽链接
         self.predictor_result = MyInference()
         self.predictor_result.predict_result_signal.connect(self.update_predict_result)
+        # TableControl初始化
 
+        self.initTableControl()
         # 选择模式
         self.ui.comboBox_mode.currentTextChanged.connect(self.on_mode_changed)
         # 选择人员
@@ -145,32 +193,56 @@ class MyMainWindow(QtWidgets.QMainWindow):
                     self.ui.comboBox_chooseperson.addItem(name_type)
         self.allname = []
 
-        # 刷新人员信息显示
+        # 刷新显示人员名称
         self.refresh_timer = QtCore.QTimer(self)
         self.refresh_timer.timeout.connect(self.timer_callback)
         self.refresh_timer.start(500)
+
+        # 控制升降桌升起、落下
+        self.tableController = TableControl()
+
+        # 刷新显示升降桌高度
+        self.refresh_tableheight_timer = QtCore.QTimer(self)
+        self.refresh_tableheight_timer.timeout.connect(self.refresh_tableheight_timer_callback)
+        self.refresh_tableheight_timer.start(100)
 
         # 刷新记录时间计时
         self.caltimer = QtCore.QTimer(self)
         self.caltimer.setInterval(100)
         self.caltimer.timeout.connect(self.onTimerOut)
 
-       
+
         self.issaving = 0                                        # 是否正在记录，默认为否
         self.ui.stackedWidget_Mode.setCurrentIndex(0)            # 默认为采集模式   
-        self.ui.comboBox_predictPos.setCurrentIndex(0)           # 默认桌子为低位
+        self.ui.comboBox_predictPos.addItem("未知")
         self.predictor_result.set_table_position(0)              # 默认桌子为低位
-        self.wordThreads = []  
+        self.workThreads = []
         self.predict_pos = []
-
+        self.setFixedSize(1500,750)
+        self.DrawPlot = DrawPlotWidget()
+        self.com_table = ""
+        self.com_device = ""
+        self.lastResultEqual = False
+        self.equalTimes = 0
+        self.tableMoving = False
+        self.lastSendHeight = -1
+        self.com_info = {}
     # 刷新记录时间
     def onTimerOut(self):
         self.secondSec+=1
         self.ui.pushButton_start.setText("停止记录:"+str(self.secondSec/10.0)+"s")
 
+    def closeEvent(self, *args, **kwargs):  # real signature unknown
+        if self.tableController is not None:
+            if self.tableController.isinit == True and self.tableController.trig_stop == False:
+                print("升降桌断开")
+                self.tableController.stop()
 
-        
-        
+        self.myserial.stop_thread()
+        self.sonic_data_collector.stop_thread()
+        self.ir_data_collector.stop_thread()
+        self.predictor_result.stop_thread()
+        self.DrawPlot.close()
 
     def keyPressEvent(self, keyevent):        
         current_mode = self.ui.comboBox_chooseposture.currentIndex()
@@ -188,8 +260,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
     # 选择推理时桌子位置
     def on_tablepos_changed(self, text):
         if(text == "高位"):
+            print("模式切换为高位")
             self.predictor_result.set_table_position(1)
         elif(text == "低位"):
+            print("模式切换为低位")
             self.predictor_result.set_table_position(0)
     
     # 选择模式
@@ -197,20 +271,54 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.stackedWidget_Mode.setCurrentIndex(self.ui.comboBox_mode.currentIndex())        
         if self.ui.stackedWidget_Mode.currentIndex() == 0:
             CONTROL.TESTING = False
-            self.predictor_result.threadon = 0
+            self.predictor_result.trig_stop = 1
             self.ui.label_result.setText('')
             self.ui.label_action.setText('')
-            
+            self.DrawPlot.close()
                 
         if self.ui.stackedWidget_Mode.currentIndex() == 1:
             CONTROL.TESTING = True
-            self.predictor_result.threadon = 1
+            self.predictor_result.trig_stop = 0
+
+            t = threading.Thread(target=self.predictor_result.get_action, )
+            t.daemon = True
+            t.start()
+
             self.ui.label_result.setText('')
-            self.ui.label_action.setText('')     
+            self.ui.label_action.setText('')
+            self.DrawPlot.show()
 
-                      
-            
+        if self.ui.stackedWidget_Mode.currentIndex() == 2:
+            CONTROL.TESTING = False
+            self.predictor_result.trig_stop = 1
+            self.ui.label_result.setText('')
+            self.ui.label_action.setText('')
+            self.DrawPlot.close()
 
+
+    def initTableControl(self):
+        self.ui.PushButton_setLow.clicked.connect(self.setLowPos)
+        self.ui.PushButton_setMiddle.clicked.connect(self.setMidPos)
+        self.ui.PushButton_setHigh.clicked.connect(self.setHighPos)
+        self.ui.pushButton_quickStop.clicked.connect(self.setQuickStop)
+
+    def setLowPos(self):
+        print("设置低位")
+        self.tableController.targetStatus = 0
+        self.lastSendHeight = 0
+    def setMidPos(self):
+        print("设置中位")
+        self.tableController.targetStatus = 1
+        self.lastSendHeight = 1
+    def setHighPos(self):
+        print("设置高位")
+        self.tableController.targetStatus = 2
+        self.lastSendHeight = 2
+    def setQuickStop(self):
+        print("急停")
+        if  self.lastSendHeight  in [0,1,2]:
+            self.tableController.targetStatus = self.lastSendHeight
+        self.lastSendHeight = -1
     # 选择姿态
     def on_chooseposture_changed(self,text):
         self.setFocus()
@@ -232,26 +340,79 @@ class MyMainWindow(QtWidgets.QMainWindow):
             if arr2[i] not in arr1:
                 return 0
         return 1
-    
+
+
     # 刷新人员信息显示
     def timer_callback(self):
-        names = self.getnames('./persondata')
-        current_person = self.ui.comboBox_chooseperson.currentText()
-        if not self.arrays_equal(names,self.allname):
-            print("存在姓名更改")
-            self.ui.comboBox_chooseperson.clear()
-            for per_name in names:
-                self.ui.comboBox_chooseperson.addItem(per_name)
-            if current_person in names:
-                self.ui.comboBox_chooseperson.setCurrentText(current_person)
-        self.allname = names
-        
+        if self.ui.stackedWidget_Mode.currentIndex() == 0:  #采集模式
+            names = self.getnames('./persondata')
+            current_person = self.ui.comboBox_chooseperson.currentText()
+            if not self.arrays_equal(names,self.allname):
+                print("存在姓名更改")
+                self.ui.comboBox_chooseperson.clear()
+                for per_name in names:
+                    self.ui.comboBox_chooseperson.addItem(per_name)
+                if current_person in names:
+                    self.ui.comboBox_chooseperson.setCurrentText(current_person)
+            self.allname = names
+        if self.ui.stackedWidget_Mode.currentIndex() == 1:  #  推理模式
+            if self.tableController is not None:
+                if self.tableMoving == True:
+                   is_result_equal = (self.tableController.last_height == self.tableController.current_height) and (self.tableController.current_height != 0)
+                   if self.lastResultEqual == True and is_result_equal == True :
+                       self.equalTimes += 1
+                       if self.equalTimes >= 4:
+                           # self.tableController.stop()
+                           self.lastResultEqual=False
+                           self.equalTimes = 0
+                           self.tableController.current_height = 0
+                           self.tableController.last_height = 0
+                           self.tableMoving = False
+                           print("桌子到位，开始动作！")
+
+                   self.lastResultEqual = is_result_equal
+
+    def refresh_tableheight_timer_callback(self):
+        if self.ui.stackedWidget_Mode.currentIndex() == 1:  # 推理模式下显示升降桌高度
+            if self.tableController is not None:
+                if self.tableController.current_height < 10.0:
+                    self.ui.label_table_current_height.setText("未激活")
+                    self.ui.comboBox_predictPos.setCurrentText("未知")
+                elif 90.0 >self.tableController.current_height >= 10.0:
+                    self.ui.label_table_current_height.setText(format(self.tableController.current_height, ".1f"))
+                    self.ui.comboBox_predictPos.setCurrentText("低位")
+                elif self.tableController.current_height > 90.0:
+                    self.ui.label_table_current_height.setText(format(self.tableController.current_height, ".1f"))
+                    self.ui.comboBox_predictPos.setCurrentText("高位")
+
+                    # if self.tableController.current_height <= 90.0 and self.tableController.last_height > 90.0 :
+                    #     self.ui.comboBox_predictPos.setCurrentIndex(0)
+                    # if self.tableController.current_height > 90.0 and self.tableController.last_height <= 90.0 :
+                    #     self.ui.comboBox_predictPos.setCurrentIndex(1)
+
+
     # 检测串口   
-    def click_pushButton_cleckcoms(self):
+    def click_pushButton_checkcoms(self):
         self.ui.comboBox_Coms.clear()
+        self.com_info.clear()
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
-            self.ui.comboBox_Coms.addItem(f"{port.device}")
+            location_com = ""
+            if str(port.location).endswith(".2"):
+                location_com = "左端"
+            if str(port.location).endswith(".3"):
+                location_com = "中间"
+            if str(port.location).endswith(".4"):
+                location_com = "右端"
+            self.ui.comboBox_Coms.addItem(f"{location_com}")
+            self.com_info[location_com] = port.device
+
+
+
+    def click_pushButton_setHeight(self):
+        toTargetHeight = self.ui.spinBox_setHeight.value()
+        self.tableController.setHeight(toTargetHeight)
+
 
     # 快速打开保存文件夹
     def click_pushButton_quickopen(self):
@@ -260,40 +421,58 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     # 显示数据
     def click_pushButton_show(self):
-        if self.ui.comboBox_Coms.count()==0:
-            QMessageBox.information(self, "提示","未找到端口连接！")
-            return
-        try:
-            global myserial
-            parser = ArgumentParser()
-            parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
-            parser.add_argument('--serial', type=str, default=self.ui.comboBox_Coms.currentText())
-            args = parser.parse_args()
-            SOCKET.SERVER_PORT = args.port
-            myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])            
-            self.ui.pushButton_cleckcoms.setEnabled(0)
+        if self.iscomdata != 1:
+            ConnectDiaglog = ConnectDeviceDialog()
+            items = [self.ui.comboBox_Coms.itemText(i) for i in range(self.ui.comboBox_Coms.count())]
+            ConnectDiaglog.ui.comboBox_device.addItems(items)
+            ConnectDiaglog.ui.comboBox_table.addItems(items)
+            result = ConnectDiaglog.exec()
+
+            # 处理用户的选择
+            if result == QtWidgets.QDialog.Accepted:
+                self.com_device = self.com_info[ConnectDiaglog.ui.comboBox_device.currentText()]
+                self.com_table =self.com_info[ConnectDiaglog.ui.comboBox_table.currentText()]
+            else:
+                return
+
+            try:
+                # 连接检测设备
+                parser = ArgumentParser()
+                parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
+                parser.add_argument('--serial', type=str, default=self.com_device)
+                print("检测设备串口:",self.com_device)
+                args = parser.parse_args()
+                SOCKET.SERVER_PORT = args.port
+                self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
+                print("检测连接成功:")
+                # 连接升降桌
+                self.tableController.startCtrl(port=self.com_table)
+                print("升降桌连接成功:")
+                print("升降桌串口:", self.com_table)
+            except Exception as e:
+                QMessageBox.information(self, "提示","设备串口连接失败！")
+                return
+
+
+            self.ui.pushButton_checkcoms.setEnabled(0)
             self.ui.comboBox_Coms.setEnabled(0)
-        except Exception as e:
-            QMessageBox.information(self, "提示","串口连接失败！")
-            return
-        
-        self.ui.pushButton_show.setEnabled(False)
-        jobs = [message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR]
-        for job in jobs:
-            t = threading.Thread(target=job,)
-            t.daemon = True
-            t.start()
+            self.ui.pushButton_show.setEnabled(0)
 
-        t_predice = threading.Thread(target=self.predictor_result.get_action,)
-        t_predice.daemon = True
-        t_predice.start()
+            jobs = [self.myserial.message_classify, self.sonic_data_collector.play_sonic, self.ir_data_collector.play_IR,
+                    self.predictor_result.get_action]
+            for job in jobs:
+                t = threading.Thread(target=job, )
+                t.daemon = True
+                t.start()
+                self.workThreads.append(t)
 
-        self.iscomdata = 1
 
-        self.predictor_result.filter_mode_on()
-        
+            self.iscomdata = 1
+            self.predictor_result.filter_mode_on()
+
     # 新增人员
     def clickpushButton_add(self):
+        print(self.size())
         name, ok = QInputDialog.getText(self, '新增测试人员', '请输入您的名字:')
         if ok:
             names = self.getnames('./persondata')
@@ -454,16 +633,28 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.label_result.setText('站姿---坐姿')
         
         self.ui.label_action.setText(result[1])
-        
-        plt.ion() 
-        plt.clf()
-        plt.figure(1)
-        plt.ylim(0,1)
-        x = ['idle','sit','sit2stand','stand','stand2sit']        
-        plt.plot(x,result[2][0],'g-.o')
-        plt.show()
-        
-        
+
+        pose_probility = result[2][0]
+        self.DrawPlot.updateData(pose_probility)
+        self.DrawPlot.update()
+
+        if self.tableMoving == False:
+            if result[1]=="升起":
+                self.tableMoving = True
+                self.setHighPos()
+            elif result[1]=="下降":
+                self.tableMoving = True
+                self.setLowPos()
+            else:
+                pass
+
+
+
+       #  CONTROL.label_percent = result[2][0]
+
+
+
+        # plot_show()
           
 
 

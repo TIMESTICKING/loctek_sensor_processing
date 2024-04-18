@@ -6,7 +6,7 @@ from models.preprocess import *
 from models.model import *
 from comps.utils import *
 import collections
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal
 from scipy import stats
 
 class TableControl:
@@ -14,7 +14,7 @@ class TableControl:
         self.table_state = 0  # 0: Low, 1: High
         self.prev_pose = None
         self.stable_counter = 0
-        self.stability_threshold = 3  # Number of consecutive frames required for stability
+        self.stability_threshold = 2  # Number of consecutive frames required for stability
 
     def control_action(self, current_pose):
         action = 1  # Default action: 'no movement'
@@ -23,7 +23,7 @@ class TableControl:
             if current_pose in [-1, 0, 1, 4]:
                 action = 1  # 'no movement'
             elif current_pose == 3:
-                if self.prev_pose in [2, -1]:
+                if self.prev_pose in [2]:
                     action = 2  # 'rise'
                 elif self.prev_pose == 3:
                     self.stable_counter += 1
@@ -38,7 +38,7 @@ class TableControl:
             if current_pose in [-1, 0, 2, 3]:
                 action = 1  # 'no movement'
             elif current_pose == 1:
-                if self.prev_pose == [4, -1]:
+                if self.prev_pose in [4]:
                     action = 0  # 'lower'
                 elif self.prev_pose == 1:
                     self.stable_counter += 1
@@ -84,7 +84,9 @@ class MyInference(QObject):
         self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_action_q = collections.deque(maxlen=5)
-        self.threadon = 0
+        self.trig_stop = False
+    def stop_thread(self):
+        self.trig_stop = True
 
     def load_network_low_position(self, path):
         """给低位网络模型加载参数
@@ -134,13 +136,16 @@ class MyInference(QObject):
     
 
     def _label_deambiguity(self, label_raw):
-        posibility, label = torch.max(label_raw, 1)
-        return label.tolist()[0] if posibility >= 0.8 else -1
+        '''relax the thresh when movement is predicted'''
+        possibility, label = torch.max(label_raw, 1)
+        possibility_thresh = 0.5 if label in [2, 4] else 0.8
+
+        return label.tolist()[0] if possibility >= possibility_thresh else -1
     
     
     def _pre_decision(self, IR, distance):
         '''first deals distance'''
-        res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 45)
+        res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 10000)
 
         return res
             
@@ -152,7 +157,9 @@ class MyInference(QObject):
             print("请调用 set_table_position(position=<int 0 or 1>) 来设置当前桌子的高低")
             time.sleep(2)
         while True:
-            if self.threadon == 1 and len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
+            if self.trig_stop:
+                break
+            if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
                 '''predecision'''
                 IR_data = np.array(MESSAGE.IR_net_ready)
                 distance_data = np.array(MESSAGE.sonic_net_ready, dtype=np.float32)
@@ -169,7 +176,8 @@ class MyInference(QObject):
                     '''inference'''
                     label_raw = self.get_label(IR_data, distance_data)
                     label = self._label_deambiguity(label_raw)
-                    
+                else:
+                    label_raw = torch.tensor([[0]*5])
 
 
                 if self.filter_mode:
@@ -178,6 +186,7 @@ class MyInference(QObject):
                     self.predicted_label_q.append(label)
                     # 计算众数
                     label, count = stats.mode(self.predicted_label_q)
+
                     # filtered_label = mode_predicted_label # int(np.argmax(mode_predicted_label, 1))
 
                     '''state machine of action'''
@@ -196,9 +205,9 @@ class MyInference(QObject):
 
                 # print the possibilities
                 # np.set_printoptions(precision=2, suppress=True)
-                print(self.label[label], self.action[action]) # label_raw.numpy(), 
-                self.predict_result_signal.emit([self.label[label], self.action[action],label_raw])
-                
+
+                self.predict_result_signal.emit([self.label[label], self.action[action],label_raw.numpy()])
+
                 time.sleep(0.1)
             else:
                 time.sleep(0.5)

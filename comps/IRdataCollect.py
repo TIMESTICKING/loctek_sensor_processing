@@ -10,7 +10,7 @@ import numpy as np
 import time
 from .utils import MESSAGE, CONTROL
 import threading
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal
 
 def IR_byte_decoder(IR_raw):
     IR_float = []
@@ -30,7 +30,7 @@ class IRDataCollect(QObject):
         super().__init__()
         self.IR_imgs = []
         self.heat_imgs = []
-
+        self.trig_stop = False
     def resave_data(self, new_scenetype, new_filename, new_sceneroot):
         try:
             for ext in ['.mat', '.mp4']:
@@ -64,9 +64,11 @@ class IRDataCollect(QObject):
         self.heat_imgs = []
         self.IR_imgs = []
 
+    def stop_thread(self):
+        self.trig_stop = True
 
     def play_IR(self):
-        while True:
+        while not self.trig_stop:
             IR_raw = MESSAGE.IR.get() # wait for an avaliable item
 
             # 将字节数组转换为浮点数列表
@@ -89,7 +91,7 @@ class IRDataCollect(QObject):
             #  key = cv2.waitKey(1)
             #  if key != -1:
             #     MESSAGE.KEY.put(key, timeout=1)
-        
+
         # raise Exception('System terminated by user at "q"')
 
 

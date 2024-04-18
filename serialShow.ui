@@ -6,26 +6,26 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>500</height>
+    <width>790</width>
+    <height>446</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
-    <width>1000</width>
-    <height>500</height>
+    <width>0</width>
+    <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>1000</width>
-    <height>500</height>
+    <width>10000</width>
+    <height>10000</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -41,7 +41,89 @@
       <property name="styleSheet">
        <string notr="true"/>
       </property>
-      <layout class="QGridLayout" name="gridLayout_7" rowstretch="1,18">
+      <layout class="QGridLayout" name="gridLayout_7" rowstretch="1,10" rowminimumheight="0,0">
+       <item row="0" column="0">
+        <widget class="QWidget" name="widget_9" native="true">
+         <layout class="QGridLayout" name="gridLayout_8">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_mode">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>15</pointsize>
+             </font>
+            </property>
+            <item>
+             <property name="text">
+              <string>采集模式</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>推理模式</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>测试升降模块</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="font">
+             <font>
+              <pointsize>15</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>选择模式：</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
        <item row="1" column="0">
         <widget class="QStackedWidget" name="stackedWidget_Mode">
          <property name="currentIndex">
@@ -215,10 +297,37 @@
          </widget>
          <widget class="QWidget" name="page">
           <layout class="QGridLayout" name="gridLayout_9" rowstretch="1,2" rowminimumheight="1,1">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <property name="spacing">
+            <number>0</number>
+           </property>
            <item row="0" column="0">
             <widget class="QWidget" name="widget_10" native="true">
              <layout class="QGridLayout" name="gridLayout_10">
-              <item row="0" column="1">
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_6">
+                <property name="font">
+                 <font>
+                  <pointsize>15</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>升降桌位置:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
                <widget class="QComboBox" name="comboBox_predictPos">
                 <property name="font">
                  <font>
@@ -238,14 +347,26 @@
                </widget>
               </item>
               <item row="0" column="0">
-               <widget class="QLabel" name="label_6">
+               <widget class="QLabel" name="label_7">
                 <property name="font">
                  <font>
                   <pointsize>15</pointsize>
                  </font>
                 </property>
                 <property name="text">
-                 <string>设置升降桌位置:</string>
+                 <string>升降桌高度:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_table_current_height">
+                <property name="font">
+                 <font>
+                  <pointsize>15</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -254,19 +375,7 @@
            </item>
            <item row="1" column="0">
             <widget class="QWidget" name="widget_11" native="true">
-             <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0">
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_10">
-                <property name="font">
-                 <font>
-                  <pointsize>15</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>推理桌子动作：</string>
-                </property>
-               </widget>
-              </item>
+             <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0,0">
               <item row="0" column="1">
                <widget class="QLabel" name="label_result">
                 <property name="font">
@@ -291,6 +400,18 @@
                 </property>
                </widget>
               </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="font">
+                 <font>
+                  <pointsize>15</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>推理桌子动作：</string>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="0">
                <widget class="QLabel" name="label_9">
                 <property name="font">
@@ -308,83 +429,106 @@
            </item>
           </layout>
          </widget>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QWidget" name="widget_9" native="true">
-         <layout class="QGridLayout" name="gridLayout_8">
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox_mode">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>100</width>
-              <height>30</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-             </font>
-            </property>
-            <item>
-             <property name="text">
-              <string>采集模式</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>推理模式</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>选择模式：</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
+         <widget class="QWidget" name="page_2">
+          <layout class="QVBoxLayout" name="verticalLayout_2" stretch="3">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QWidget" name="widget_12" native="true">
+             <layout class="QGridLayout" name="gridLayout_6">
+              <item row="0" column="2">
+               <widget class="QPushButton" name="PushButton_setHigh">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>升降桌高位</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="PushButton_setMiddle">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>升降桌中位</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QPushButton" name="pushButton_quickStop">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 0, 0);</string>
+                </property>
+                <property name="text">
+                 <string>升降桌急停</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QPushButton" name="PushButton_setLow">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>14</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>升降桌低位</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
@@ -423,9 +567,9 @@
        </property>
        <item>
         <widget class="QWidget" name="widget_8" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1,1">
-          <item>
-           <widget class="QPushButton" name="pushButton_cleckcoms">
+         <layout class="QGridLayout" name="gridLayout_12">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButton_checkcoms">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -448,7 +592,7 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
            <widget class="QComboBox" name="comboBox_Coms">
             <property name="minimumSize">
              <size>
@@ -463,7 +607,7 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="2">
            <widget class="QPushButton" name="pushButton_show">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -483,7 +627,7 @@
              </font>
             </property>
             <property name="text">
-             <string>显示数据</string>
+             <string>连接设备</string>
             </property>
            </widget>
           </item>

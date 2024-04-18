@@ -90,43 +90,6 @@ class SM2h2t:
     findinghead2=1
     findingtail=2
 
-class MySerial_2head1tail(MySerial):
-    def __init__(self, h2, *args, **kwargs):
-        super(MySerial_2head1tail, self).__init__(*args, **kwargs)
-        # self.frame_len = frame_len
-        self.h2 = h2
-
-    def readData(self):
-        buf = b''
-        sta = SM2h2t.findinghead1
-        read_cnt = 0
-        max_read = 64 * 10
-        while True:
-            read_cnt += 1
-            data = self.port.read()
-            # print(data.hex())
-            if len(data) == 0 or read_cnt > max_read:
-                warnings.warn('串口读取超时')
-                self.portClose()
-                break
-
-            if sta == SM2h2t.findinghead1:
-                if data == self.h:
-                    # buf += data
-                    sta = SM2h2t.findinghead2
-            elif sta == SM2h2t.findinghead2:
-                if data == self.h2:
-                    # buf += data
-                    sta = SM2h2t.findingtail
-            elif sta == SM2h2t.findingtail:
-                if data == self.t and (len(buf) in self.length or self.length is None):
-                    yield buf
-                    read_cnt = 0
-                    buf = b''
-                    sta = SM2h2t.findinghead1
-                else:
-                    buf += data
-
 
 class MySerial_headerOnly(MySerial):
     def __init__(self, frame_len, *args, **kwargs):
