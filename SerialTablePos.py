@@ -1,6 +1,8 @@
 import time
 import serial
 import threading
+import time
+
 
 recv_buf_len = 30
 frame_start = 0x9B
@@ -25,10 +27,11 @@ class SerialCommand():
         # self.baudrate = baudrate
         # self.stopbits = stopbits
         # self.bytesize = bytesize
-
+        self.is_moving = False
         self.running = 1
         self.send_key = send_nokey
         self.height_value = 0
+        self.wait_moving_count = 0
 
         self.ser = serial.Serial()
         self.ser.port = portname
@@ -49,6 +52,7 @@ class SerialCommand():
         self.led_value = 0
         self.ser.reset_input_buffer()
 
+        self.start_time = time.time()
 
     def stop(self):
         self.running = -1
@@ -66,7 +70,6 @@ class SerialCommand():
             #     print("thread: 高位")
             # 串口处理
             count = self.ser.inWaiting()
-
 
             for i in range(0, count):
                 recv_byte = int.from_bytes(self.ser.read(), 'little')
@@ -104,6 +107,15 @@ class SerialCommand():
                                 elif self.recv_buf[5] & 0x80:
                                     self.led_value = self.led_value / 10
                                 # print("Height=", self.led_value)
+                                if abs(self.led_value - self.height_value) < 0.01:
+                                    if time.time() - self.start_time > 0.5:
+                                        self.is_moving = False
+                                    else:
+                                        self.is_moving = True
+                                else:
+                                    self.wait_moving_count = 0
+                                    self.is_moving = True
+                                    self.start_time = time.time()
                                 self.height_value = self.led_value
                             else:
                                 pass
@@ -120,11 +132,9 @@ class SerialCommand():
 # send_prekey3 = b'\x9B\x06\x02\x10\x00\xAC\xAC\x9D'    # 3挡位
 
 
-
-
 class TableControl(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self,name="TableControl")
+        threading.Thread.__init__(self, name="TableControl")
         # 通讯对象与子线程
         self.__comm = None
         self.__comm_thread = None
@@ -135,32 +145,38 @@ class TableControl(threading.Thread):
         self.trig_stop = False
         self.isinit = False
 
-    def startCtrl(self,port):
+    def startCtrl(self, port):
         self.__comm = SerialCommand(port)
-        self.__comm_thread = threading.Thread(target = self.__comm.run)
+        self.__comm_thread = threading.Thread(target=self.__comm.run)
         self.__comm_thread.start()
         self.start()
         self.isinit = True
 
-
     def stop(self):
         if self.__comm is not None:
             self.__comm.stop()
-            self.__comm_thread.join() 
+            self.__comm_thread.join()
         self.trig_stop = True
         self.join()
         self.trig_stop = False
-
+    def getHeight(self):
+        if self.__comm is None:
+            return  0.0
+        return self.__comm.height_value
     def run(self):
-            while not self.trig_stop:
-                self.loopRun()
-                time.sleep(1)
-            self.trig_stop = False
+        while not self.trig_stop:
+            self.loopRun()
+            time.sleep(1)
+        self.trig_stop = False
+
+    def getTableMovingStatus(self):
+        return self.__comm.is_moving
 
     def loopRun(self):
         if self.__comm is not None:
             self.last_height = self.current_height
             self.current_height = self.__comm.height_value
+
         if self.targetStatus == 0:  # 低位
             self.__comm.send_key = send_prekey1
             self.targetStatus = -1
@@ -176,6 +192,7 @@ class TableControl(threading.Thread):
 
     def closeCom(self):
         self.controller.ser.close()
+
 
 if __name__ == "__main__":
     tc = TableControl()

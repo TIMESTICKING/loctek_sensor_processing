@@ -89,11 +89,6 @@
               <string>推理模式</string>
              </property>
             </item>
-            <item>
-             <property name="text">
-              <string>测试升降模块</string>
-             </property>
-            </item>
            </widget>
           </item>
           <item row="0" column="0">
@@ -127,7 +122,7 @@
        <item row="1" column="0">
         <widget class="QStackedWidget" name="stackedWidget_Mode">
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="stackedWidget_4Page1">
           <layout class="QGridLayout" name="gridLayout" rowstretch="1,6,1" rowminimumheight="1,2,3">
@@ -375,7 +370,7 @@
            </item>
            <item row="1" column="0">
             <widget class="QWidget" name="widget_11" native="true">
-             <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0,0">
+             <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0">
               <item row="0" column="1">
                <widget class="QLabel" name="label_result">
                 <property name="font">
@@ -421,106 +416,6 @@
                 </property>
                 <property name="text">
                  <string>推理结果：</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="page_2">
-          <layout class="QVBoxLayout" name="verticalLayout_2" stretch="3">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QWidget" name="widget_12" native="true">
-             <layout class="QGridLayout" name="gridLayout_6">
-              <item row="0" column="2">
-               <widget class="QPushButton" name="PushButton_setHigh">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>34</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>升降桌高位</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QPushButton" name="PushButton_setMiddle">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>34</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>升降桌中位</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QPushButton" name="pushButton_quickStop">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>34</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(255, 0, 0);</string>
-                </property>
-                <property name="text">
-                 <string>升降桌急停</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="PushButton_setLow">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>34</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>升降桌低位</string>
                 </property>
                </widget>
               </item>
