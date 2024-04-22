@@ -372,13 +372,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.com_info.clear()
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
-            location_com = ""
-            if str(port.location).endswith(".2"):
-                location_com = "左端"
-            if str(port.location).endswith(".3"):
-                location_com = "中间"
-            if str(port.location).endswith(".4"):
-                location_com = "右端"
+            location_com = "com"
             self.ui.comboBox_Coms.addItem(f"{location_com}")
             self.com_info[location_com] = port.device
 
@@ -417,10 +411,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 SOCKET.SERVER_PORT = args.port
                 self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
                 print("检测连接成功:")
-                # 连接升降桌
-                self.tableController.startCtrl(port=self.com_table)
-                print("升降桌连接成功:")
-                print("升降桌串口:", self.com_table)
+                # # 连接升降桌
+                # self.tableController.startCtrl(port=self.com_table)
+                # print("升降桌连接成功:")
+                # print("升降桌串口:", self.com_table)
             except Exception as e:
                 QMessageBox.information(self, "提示", "设备串口连接失败！")
                 return
