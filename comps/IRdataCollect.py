@@ -10,7 +10,7 @@ import numpy as np
 import time
 from .utils import MESSAGE, CONTROL
 import threading
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal
 
 def IR_byte_decoder(IR_raw):
     IR_float = []

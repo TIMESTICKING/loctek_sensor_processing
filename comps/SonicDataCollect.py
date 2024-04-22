@@ -3,7 +3,7 @@ import shutil
 import struct
 import traceback
 from .utils import *
-from PyQt6.QtCore import QObject,pyqtSignal
+from PyQt5.QtCore import QObject,pyqtSignal
 
 class SonicDataCollect(QObject):
 

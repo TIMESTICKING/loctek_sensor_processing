@@ -6,7 +6,7 @@ from models.preprocess import *
 from models.model import *
 from comps.utils import *
 import collections
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal
 from scipy import stats
 
 class TableControl:
@@ -82,7 +82,7 @@ class MyInference(QObject):
         self.action = ['下降', '不动', '升起']
 
         self.predicted_label_q = collections.deque(maxlen=5)
-        self.predicted_action_q = collections.deque(maxlen=5)
+        self.predicted_action_q = collections.deque(maxlen=10)
 
     def load_network_low_position(self, path):
         """给低位网络模型加载参数
@@ -179,14 +179,18 @@ class MyInference(QObject):
                 if self.filter_mode:
                     '''mode filter label'''
                     # push into the queue
-                    self.predicted_label_q.append(label)
+                    # self.predicted_label_q.append(label)
                     # 计算众数
-                    label, count = stats.mode(self.predicted_label_q)
+                    # label, count = stats.mode(self.predicted_label_q)
                     # filtered_label = mode_predicted_label # int(np.argmax(mode_predicted_label, 1))
 
                     '''state machine of action'''
                     # get the action of the table from label and table position
                     action = self.table_controller.control_action(label)
+
+                    '''filter the action'''
+                    self.predicted_action_q.append(action)
+                    action, count = stats.mode(self.predicted_action_q)
                 else:
                     action = 0
                     if self.position == 0:
@@ -194,13 +198,10 @@ class MyInference(QObject):
                     else:
                         action = 1 if label in [0, 2, 3] else 0
 
-                '''filter the action'''
-                # self.predicted_action_q.append(action)
-                # mode_predicted_action = np.argmax(np.bincount(self.predicted_action_q))
 
                 # print the possibilities
-                # np.set_printoptions(precision=2, suppress=True)
-                print(self.label[label], self.action[action]) # label_raw.numpy(), 
+                np.set_printoptions(precision=2, suppress=True)
+                print(label_raw.numpy(), self.label[label], self.action[action]) # label_raw.numpy(), 
                 self.predict_result_signal.emit([self.label[label], self.action[action]])
                 
                 time.sleep(0.1)

@@ -8,12 +8,12 @@ from comps.SonicDataCollect import *
 from my_socket import server
 from argparse import ArgumentParser
 import sys
-from PyQt6 import QtWidgets
+from PyQt5 import QtWidgets
 from serialShow import Ui_SerialShow
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog
-from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import QApplication, QMessageBox,QFileDialog,QInputDialog
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 import serial.tools.list_ports
 from models.infer import MyInference
 import io
