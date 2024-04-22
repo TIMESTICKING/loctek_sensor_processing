@@ -141,30 +141,33 @@ def load_preprocess(data_dir='data/', pre_keywords='low-posi*'):
 
     # Process each folder
     for folder in folders:
-        # Determine the label based on folder name
-        label = 'idle' if folder.endswith('nobody') or folder.endswith('passenger') else folder.split('-')[-1]
-        
-        # Path to the current folder
-        folder_path = os.path.join(data_dir, folder)
-        
-        # Get all file names in the current folder
-        files = os.listdir(folder_path)
-        
-        # Group files by sample ID
-        filenames = set(file[:-4] for file in files if file.endswith('.mat'))
-        
-        # Process each sample
-        for filename in filenames:
-            csv_file = os.path.join(folder_path, f"{filename}.csv")
-            mat_file = os.path.join(folder_path, f"{filename}.mat")
-            
-            if os.path.exists(csv_file):
-                distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
-            if os.path.exists(mat_file):
-                IR_dataset.append(scipy.io.loadmat(mat_file)['IR_video'])
-                filename_dataset.append(f'{folder_path}/{filename}')
 
-            groudtruth.append(labels.index(label))
+            # Determine the label based on folder name
+            label = 'idle' if folder.endswith('nobody') or folder.endswith('passenger') else folder.split('-')[-1]
+
+            # Path to the current folder
+            folder_path = os.path.join(data_dir, folder)
+
+            # Get all file names in the current folder
+            files = os.listdir(folder_path)
+
+            # Group files by sample ID
+            filenames = set(file[:-4] for file in files if file.endswith('.mat'))
+
+            # Process each sample
+            for filename in filenames:
+
+                csv_file = os.path.join(folder_path, f"{filename}.csv")
+                mat_file = os.path.join(folder_path, f"{filename}.mat")
+
+                if os.path.exists(csv_file):
+                    distance_dataset.append(distance_preprocess(pd.read_csv(csv_file, header=None, dtype=float).values))
+                if os.path.exists(mat_file):
+                    IR_dataset.append(scipy.io.loadmat(mat_file)['IR_video'])
+                    filename_dataset.append(f'{folder_path}/{filename}')
+
+                groudtruth.append(labels.index(label))
+
 
 
     print('distance length is', len(distance_dataset))
@@ -240,6 +243,8 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
 
 
     # data scale
+    print("sampled_distance_train_dataset=",sampled_distance_train_dataset)
+    print("sampled_IR_train_dataset=",sampled_IR_train_dataset)
     train_distance_tensor = torch.tensor(np.stack(sampled_distance_train_dataset, axis=0), dtype=torch.float32)
     train_IR_tensor, max_IR, min_IR = scale_IR(np.stack(sampled_IR_train_dataset, axis=0))
 
@@ -281,6 +286,7 @@ def fix_sonic(dis: np.ndarray):
 
 def make_dataset():
     datasets = load_preprocess(data_dir='../data_v2', pre_keywords='high-posi*')
+    print("111:",datasets[0],datasets[1],datasets[2])
     # 准备训练集
     train_dataset, test_dataset = prepare_datasets(datasets, 0.8, 14, 9)
 

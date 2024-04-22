@@ -37,6 +37,7 @@ class CONTROL:
     last_sceneroot = ''
     last_scenetype = '' 
     last_filename = ''
+    label_percent = []
 
     @staticmethod
     def get_scenetype():

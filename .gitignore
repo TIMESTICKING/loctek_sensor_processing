@@ -8,3 +8,8 @@ data_v3/
 **/__pycache__/
 persondata/
 models/wrongs
+persondata.zip
+persondata/
+20240412_1413data.zip
+.vscode/c_cpp_properties.json
+**.pyc

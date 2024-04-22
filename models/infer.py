@@ -82,7 +82,12 @@ class MyInference(QObject):
         self.action = ['下降', '不动', '升起']
 
         self.predicted_label_q = collections.deque(maxlen=5)
+        self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_action_q = collections.deque(maxlen=10)
+        self.trig_stop = False
+
+    def stop_thread(self):
+        self.trig_stop = True
 
     def load_network_low_position(self, path):
         """给低位网络模型加载参数
@@ -141,7 +146,7 @@ class MyInference(QObject):
     
     def _pre_decision(self, IR, distance):
         '''first deals distance'''
-        res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 45)
+        res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 10000)
 
         return res
             
@@ -153,6 +158,8 @@ class MyInference(QObject):
             print("请调用 set_table_position(position=<int 0 or 1>) 来设置当前桌子的高低")
             time.sleep(2)
         while True:
+            if self.trig_stop:
+                break
             if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
                 '''predecision'''
                 IR_data = np.array(MESSAGE.IR_net_ready)
@@ -162,9 +169,6 @@ class MyInference(QObject):
                 else:
                     judged = False
 
-
-
-
                 if not judged:
                     '''data process'''
                     IR_data, _, _ = scale_IR(IR_data)
@@ -173,7 +177,8 @@ class MyInference(QObject):
                     '''inference'''
                     label_raw = self.get_label(IR_data, distance_data)
                     label = self._label_deambiguity(label_raw)
-                    
+                else:
+                    label_raw = torch.tensor([[0]*5])
 
 
                 if self.filter_mode:
@@ -200,10 +205,10 @@ class MyInference(QObject):
 
 
                 # print the possibilities
-                np.set_printoptions(precision=2, suppress=True)
-                print(label_raw.numpy(), self.label[label], self.action[action]) # label_raw.numpy(), 
-                self.predict_result_signal.emit([self.label[label], self.action[action]])
-                
+                # np.set_printoptions(precision=2, suppress=True)
+
+                self.predict_result_signal.emit([self.label[label], self.action[action],label_raw.numpy()])
+
                 time.sleep(0.1)
             else:
                 time.sleep(0.5)
