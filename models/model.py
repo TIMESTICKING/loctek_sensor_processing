@@ -4,6 +4,8 @@
 @Time        :   2024/04/24 11:03:05
 """
 
+import collections
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,6 +23,59 @@ BATCH = 5
 IR_DIM = 1
 
 mydevice = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+class MLPFormula:
+
+    IR_encoded = collections.deque(maxlen=FRAME_IR)
+
+    def __init__(self, pth) -> None:
+        self.parameters = torch.load(os.path.normpath(pth), map_location=mydevice)
+        '''打印某个矩阵'''
+        print(self.parameters['mlp1.0.weight'])
+        '''把矩阵转为列表，直接拷贝到C++文件？'''
+        print(self.parameters['mlp1.0.weight'].tolist())
+
+
+    def encodeIR(self, IR):
+        IR = IR.view(1, 64)
+        res = (IR @ self.parameters['mlp1.0.weight'].T) + self.parameters['mlp1.0.bias']
+        '''激活函数，max(res, 0)，其实可以在矩阵逐元素运算时完成'''
+        res = torch.relu(res)
+        res = (res @ self.parameters['mlp1.2.weight'].T) + self.parameters['mlp1.2.bias']
+        res = torch.relu(res)
+
+        MLPFormula.IR_encoded.append(res)
+
+    
+    def clear_data_ready(self):
+        """call it every time you change the
+        """        
+        MLPFormula.IR_encoded.clear()
+
+
+    def is_data_ready(self):
+        return len(MLPFormula.IR_encoded) == FRAME_IR
+
+
+    def __call__(self, ir_encoded, distance_data):
+        distance_data = distance_data.view(-1, FRAME_DISTANCE*IR_DIM)
+        distance_encoded = (distance_data @ self.parameters['mlp2.0.weight'].T) + self.parameters['mlp2.0.bias']
+        '''激活函数，max(res, 0)，其实可以在矩阵逐元素运算时完成'''
+        distance_encoded = torch.relu(distance_encoded)
+        distance_encoded = (distance_encoded @ self.parameters['mlp2.2.weight'].T) + self.parameters['mlp2.2.bias']
+        distance_encoded = torch.relu(distance_encoded)
+
+        '''把编码后的IR数据和超声数据拼接起来'''
+        combined_output = torch.cat((ir_encoded, distance_encoded), dim=1)
+
+        label = (combined_output @ self.parameters['mlp3.0.weight'].T) + self.parameters['mlp3.0.bias']
+        '''softmax归一化指数函数，exp(xi) / sum[exp(xj)]'''
+        label = torch.softmax(label, dim=1)
+
+        return label
+
+
 
 # 神经网络类
 class MyMLP(nn.Module):
@@ -65,6 +120,9 @@ class MyMLP(nn.Module):
 
         final_output = self.mlp3(combined_output)
         return final_output
+
+    def clear_data_ready(self):
+        pass
 
 
     def forward(self, ir_data, distance_data):

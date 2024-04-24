@@ -15,6 +15,10 @@ import collections
 from PyQt5.QtCore import QObject, pyqtSignal
 from scipy import stats
 
+
+USE_TORCH = False
+
+
 class TableControl:
     def __init__(self):
         self.table_state = 0  # 0: Low, 1: High
@@ -65,16 +69,12 @@ class TableControl:
         return action
 
 
+
+
 class MyInference(QObject):
     predict_result_signal = pyqtSignal(list)
     def __init__(self) -> None:
         super().__init__()
-        self.low_net = MyMLP().to(mydevice)
-        self.high_net = MyMLP().to(mydevice)
-
-        # load default model
-        self.load_network_low_position('models/checkpoints_v2/low/AllData_v2_balanced_0d86.pth')
-        self.load_network_high_position('models\checkpoints_v2\high\AllData_v2_balanced_0d90.pth')
 
         # table control state machine
         self.table_controller = TableControl()
@@ -91,24 +91,10 @@ class MyInference(QObject):
         self.predicted_action_q = collections.deque(maxlen=10)
         self.trig_stop = False
 
+
     def stop_thread(self):
         self.trig_stop = True
 
-    def load_network_low_position(self, path):
-        """给低位网络模型加载参数
-
-        Args:
-            path (string): 文件路径
-        """        
-        self.low_net.load_state_dict(torch.load(os.path.normpath(path), map_location=mydevice))
-
-    def load_network_high_position(self, path):
-        """给高位网络模型加载参数
-
-        Args:
-            path (string): 文件路径
-        """        
-        self.high_net.load_state_dict(torch.load(os.path.normpath(path), map_location=mydevice))
 
 
     def filter_mode_on(self):
@@ -128,17 +114,8 @@ class MyInference(QObject):
         self.table_controller.table_state = position
         self.net = self.low_net if position == 0 else self.high_net
 
-    @torch.no_grad()
-    def get_label(self, IR_data, distance_data):
-        IR_data = IR_data.to(mydevice)
-        distance_data = distance_data.to(mydevice)
+        self.net.clear_data_ready()
 
-        outputs = self.net(IR_data, distance_data)
-        outputs = outputs.cpu()
-
-        # _, predicted = torch.max(outputs.data, 1)
-
-        return outputs
     
 
     def _label_deambiguity(self, label_raw):
@@ -154,6 +131,10 @@ class MyInference(QObject):
         res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 10000)
 
         return res
+    
+
+    def get_label(self, IR_data, distance_data):
+        raise NotImplementedError
             
 
     def get_action(self):
@@ -219,6 +200,58 @@ class MyInference(QObject):
                 time.sleep(0.5)
 
 
+
+class InferenceTorch(MyInference):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.low_net = MyMLP().to(mydevice)
+        self.high_net = MyMLP().to(mydevice)
+
+        # load default model
+        self.load_network_low_position('models/checkpoints_v2/low/AllData_v2_balanced_0d86.pth')
+        self.load_network_high_position('models\checkpoints_v2\high\AllData_v2_balanced_0d90.pth')
+
+
+    def load_network_low_position(self, path):
+        """给低位网络模型加载参数
+
+        Args:
+            path (string): 文件路径
+        """        
+        self.low_net.load_state_dict(torch.load(os.path.normpath(path), map_location=mydevice))
+
+    def load_network_high_position(self, path):
+        """给高位网络模型加载参数
+
+        Args:
+            path (string): 文件路径
+        """        
+        self.high_net.load_state_dict(torch.load(os.path.normpath(path), map_location=mydevice))
+
+
+    @torch.no_grad()
+    def get_label(self, IR_data, distance_data):
+        IR_data = IR_data.to(mydevice)
+        distance_data = distance_data.to(mydevice)
+
+        outputs = self.net(IR_data, distance_data)
+        outputs = outputs.cpu()
+
+        # _, predicted = torch.max(outputs.data, 1)
+
+        return outputs
+
+
+
+class InferenceFormula(MyInference):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.low_net = MLPFormula('models/checkpoints_v2/low/AllData_v2_balanced_0d86.pth')
+        self.high_net = MLPFormula('models\checkpoints_v2\high\AllData_v2_balanced_0d90.pth')
 
 
 
