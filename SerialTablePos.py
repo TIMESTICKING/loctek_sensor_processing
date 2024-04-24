@@ -108,7 +108,7 @@ class SerialCommand():
                                     self.led_value = self.led_value / 10
                                 # print("Height=", self.led_value)
                                 if abs(self.led_value - self.height_value) < 0.01:
-                                    if time.time() - self.start_time > 0.5:
+                                    if time.time() - self.start_time > 0.8:
                                         self.is_moving = False
                                     else:
                                         self.is_moving = True

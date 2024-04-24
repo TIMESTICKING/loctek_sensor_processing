@@ -297,14 +297,15 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.DrawPlot.close()
 
     def setLowPos(self):
-        if  abs(self.__last_changed_height - self.tableController.getHeight()) > 0.1 and not (self.tableController.getTableMovingStatus()) and self.tableController.targetStatus == -1:
+        if  abs(self.__last_changed_height - self.tableController.getHeight()) > 0.2 and not (self.tableController.getTableMovingStatus()) and self.tableController.targetStatus == -1:
+
             print("设置低位")
             self.__last_changed_height = self.tableController.getHeight()
             self.tableController.targetStatus = 0
             self.lastSendHeight = 0
 
     def setHighPos(self):
-        if  abs(self.__last_changed_height - self.tableController.getHeight()) > 0.1 and not (self.tableController.getTableMovingStatus()) and self.tableController.targetStatus == -1:
+        if  abs(self.__last_changed_height - self.tableController.getHeight()) > 0.2 and not (self.tableController.getTableMovingStatus()) and self.tableController.targetStatus == -1:
             print("设置高位")
             self.__last_changed_height = self.tableController.getHeight()
             self.tableController.targetStatus = 2
@@ -372,9 +373,17 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.com_info.clear()
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
-            location_com = port.name
-            self.ui.comboBox_Coms.addItem(f"{location_com}")
-            self.com_info[location_com] = port.device
+            #location_com = port.name
+            # location_com = port.location
+            # if location_com.endswith(".2"):
+            #     location = "左端"
+            # if location_com.endswith(".3"):
+            #     location = "中间"
+            # if location_com.endswith(".4"):
+            #     location = "右端"
+            self.ui.comboBox_Coms.addItem(f"{port.location}")
+            self.com_info[port.location] = port.device
+
 
     def click_pushButton_setHeight(self):
         toTargetHeight = self.ui.spinBox_setHeight.value()
@@ -406,17 +415,22 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 parser = ArgumentParser()
                 parser.add_argument('--port', type=int, default=SOCKET.SERVER_PORT)
                 parser.add_argument('--serial', type=str, default=self.com_device)
-                print("检测设备串口:", self.com_device)
                 args = parser.parse_args()
                 SOCKET.SERVER_PORT = args.port
                 self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
-                print("检测连接成功:")
+                print("检测设备串口:", self.com_device)
+                print("检测设备连接成功！")
+
+            except Exception as e:
+                QMessageBox.information(self, "提示", "检测设备串口连接失败！")
+
+            try:
                 # 连接升降桌
                 self.tableController.startCtrl(port=self.com_table)
-                print("升降桌连接成功:")
                 print("升降桌串口:", self.com_table)
+                print("升降桌连接成功！")
             except Exception as e:
-                QMessageBox.information(self, "提示", "设备串口连接失败！")
+                QMessageBox.information(self, "提示", "升降桌串口连接失败！")
                 return
 
             self.ui.pushButton_checkcoms.setEnabled(0)

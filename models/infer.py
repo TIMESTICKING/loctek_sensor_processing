@@ -14,7 +14,7 @@ class TableControl:
         self.table_state = 0  # 0: Low, 1: High
         self.prev_pose = None
         self.stable_counter = 0
-        self.stability_threshold = 2  # Number of consecutive frames required for stability
+        self.stability_threshold = 4  # Number of consecutive frames required for stability
 
     def control_action(self, current_pose):
         action = 1  # Default action: 'no movement'
@@ -81,7 +81,6 @@ class MyInference(QObject):
         self.label = ['idle', 'sit', 'sit2stand', 'stand', 'stand2sit', 'not sure']
         self.action = ['下降', '不动', '升起']
 
-        self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_action_q = collections.deque(maxlen=10)
         self.trig_stop = False
@@ -209,7 +208,7 @@ class MyInference(QObject):
 
                 self.predict_result_signal.emit([self.label[label], self.action[action],label_raw.numpy()])
 
-                time.sleep(0.1)
+                time.sleep(0.05)
             else:
                 time.sleep(0.5)
 
