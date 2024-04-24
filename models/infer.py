@@ -88,7 +88,6 @@ class MyInference(QObject):
         self.action = ['下降', '不动', '升起']
 
         self.predicted_label_q = collections.deque(maxlen=5)
-        self.predicted_label_q = collections.deque(maxlen=5)
         self.predicted_action_q = collections.deque(maxlen=10)
         self.trig_stop = False
 
