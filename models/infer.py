@@ -133,6 +133,7 @@ class MyInference(QObject):
         return res
     
 
+    @torch.no_grad()
     def get_label(self, IR_data, distance_data):
         raise NotImplementedError
             

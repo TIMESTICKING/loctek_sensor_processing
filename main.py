@@ -16,7 +16,7 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from draw_plot import DrawPlotWidget
 import serial.tools.list_ports
-from models.infer import MyInference
+from models.infer import InferenceFormula, InferenceTorch
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FC
 from matplotlib import pyplot as plt
 import os
@@ -28,7 +28,7 @@ os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'D:\\Environments\\Anaconda3\\envs\\
 class DEVICE:
     IR_data_collector = IRDataCollect()
     sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
-    predictor = MyInference()
+    predictor = InferenceTorch() # MyInference()
 
 
 # def plot_show():
@@ -154,7 +154,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ir_data_collector = IRDataCollect()
         self.ir_data_collector.new_heatmap_signal.connect(self.update_heatmap_display)
         # MyInference初始化与信号槽链接
-        self.predictor_result = MyInference()
+        self.predictor_result = InferenceTorch()  # MyInference()
         self.predictor_result.predict_result_signal.connect(self.update_predict_result)
 
         # 选择模式
@@ -372,7 +372,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.com_info.clear()
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
-            location_com = "com"
+            location_com = port.name
             self.ui.comboBox_Coms.addItem(f"{location_com}")
             self.com_info[location_com] = port.device
 
