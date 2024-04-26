@@ -6,6 +6,9 @@ import collections
 from models.model import FRAME_DISTANCE, FRAME_IR
 
 
+USE_TORCH = True
+
+
 class MESSAGE:
     KEY = Queue(5)
     IR:Queue = Queue(5)
