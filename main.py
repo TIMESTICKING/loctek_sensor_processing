@@ -28,7 +28,7 @@ os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'D:\\Environments\\Anaconda3\\envs\\
 class DEVICE:
     IR_data_collector = IRDataCollect()
     sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
-    predictor = InferenceTorch() # MyInference()
+    predictor = InferenceFormula() # InferenceTorch() # MyInference()
 
 
 # def plot_show():
@@ -154,7 +154,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ir_data_collector = IRDataCollect()
         self.ir_data_collector.new_heatmap_signal.connect(self.update_heatmap_display)
         # MyInference初始化与信号槽链接
-        self.predictor_result = InferenceTorch()  # MyInference()
+        self.predictor_result = InferenceFormula() # InferenceTorch()  # MyInference()
         self.predictor_result.predict_result_signal.connect(self.update_predict_result)
 
         # 选择模式

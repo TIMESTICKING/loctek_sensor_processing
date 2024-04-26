@@ -45,6 +45,7 @@ class MLPFormula:
         res = (res @ self.parameters['mlp1.2.weight'].T) + self.parameters['mlp1.2.bias']
         res = torch.relu(res)
 
+        res = res.squeeze(0)
         MLPFormula.IR_encoded.append(res)
 
     
@@ -67,7 +68,7 @@ class MLPFormula:
         distance_encoded = torch.relu(distance_encoded)
 
         '''把编码后的IR数据和超声数据拼接起来'''
-        combined_output = torch.cat((ir_encoded, distance_encoded), dim=1)
+        combined_output = torch.cat((ir_encoded.view(1, -1), distance_encoded), dim=1)
 
         label = (combined_output @ self.parameters['mlp3.0.weight'].T) + self.parameters['mlp3.0.bias']
         '''softmax归一化指数函数，exp(xi) / sum[exp(xj)]'''

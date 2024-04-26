@@ -126,17 +126,29 @@ class MyInference(QObject):
         return label.tolist()[0] if possibility >= possibility_thresh else -1
     
     
-    def _pre_decision(self, IR, distance):
+    def _pre_decision(self, distance):
         '''first deals distance'''
         res = nearest_neighbor_interpolate_and_analyze(distance, self.position, 85, 100, 10000)
 
         return res
     
 
+    def _prepare_input(self):
+        if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
+            '''predecision'''
+            IR_data = np.array(MESSAGE.IR_net_ready)
+            distance_data = np.array(MESSAGE.sonic_net_ready, dtype=np.float32)
+
+            return True, IR_data, distance_data
+        
+        return False, None, None
+
+
     @torch.no_grad()
-    def get_label(self, IR_data, distance_data):
+    def _get_label(self, IR_data, distance_data):
         raise NotImplementedError
-            
+    
+
 
     def get_action(self):
         """Get the predicted label and the action of the table
@@ -147,22 +159,17 @@ class MyInference(QObject):
         while True:
             if self.trig_stop:
                 break
-            if len(MESSAGE.IR_net_ready) == FRAME_IR and len(MESSAGE.sonic_net_ready) == FRAME_DISTANCE:
-                '''predecision'''
-                IR_data = np.array(MESSAGE.IR_net_ready)
-                distance_data = np.array(MESSAGE.sonic_net_ready, dtype=np.float32)
+
+            sta, IR_data, distance_data = self._prepare_input()
+            if sta:
                 if self.filter_mode:
-                    judged, label = self._pre_decision(IR_data, distance_data)
+                    '''predecision'''
+                    judged, label = self._pre_decision(distance_data)
                 else:
                     judged = False
 
                 if not judged:
-                    '''data process'''
-                    IR_data, _, _ = scale_IR(IR_data)
-                    distance_data = torch.from_numpy(distance_preprocess(distance_data))
-
-                    '''inference'''
-                    label_raw = self.get_label(IR_data, distance_data)
+                    label_raw = self._get_label(IR_data, distance_data)
                     label = self._label_deambiguity(label_raw)
                 else:
                     label_raw = torch.tensor([[0]*5])
@@ -230,19 +237,25 @@ class InferenceTorch(MyInference):
             path (string): 文件路径
         """        
         self.high_net.load_state_dict(torch.load(os.path.normpath(path), map_location=mydevice))
+    
 
 
     @torch.no_grad()
-    def get_label(self, IR_data, distance_data):
+    def _get_label(self, IR_data, distance_data):
+        '''data process'''
+        IR_data, _, _ = scale_IR(IR_data)
+        distance_data = torch.from_numpy(distance_preprocess(distance_data))
+
+        '''inference'''
         IR_data = IR_data.to(mydevice)
         distance_data = distance_data.to(mydevice)
 
-        outputs = self.net(IR_data, distance_data)
-        outputs = outputs.cpu()
+        label_raw = self.net(IR_data, distance_data)
+        label_raw = label_raw.cpu()
 
         # _, predicted = torch.max(outputs.data, 1)
 
-        return outputs
+        return label_raw
 
 
 
@@ -253,6 +266,32 @@ class InferenceFormula(MyInference):
 
         self.low_net = MLPFormula('models/checkpoints_v2/low/AllData_v2_balanced_0d86.pth')
         self.high_net = MLPFormula('models\checkpoints_v2\high\AllData_v2_balanced_0d90.pth')
+
+
+
+    @torch.no_grad()
+    def _get_label(self, _, distance_data):
+        if len(MESSAGE.IR_net_ready) > 0:
+            '''encode IR per frame'''
+            IR_data = torch.tensor(MESSAGE.IR_net_ready.popleft())
+            IR_data, _, _ = scale_IR(IR_data)
+            self.net.encodeIR(IR_data)
+
+        if not self.net.is_data_ready():
+            # all the IR encoded are not ready
+            return torch.tensor([[0.0]*5])
+
+
+        # prepare the encoded IR to tensor
+        IR_data = torch.from_numpy(np.array(self.net.IR_encoded))
+        distance_data = torch.from_numpy(distance_preprocess(distance_data))
+
+        outputs = self.net(IR_data, distance_data)
+        outputs = outputs
+
+        # _, predicted = torch.max(outputs.data, 1)
+
+        return outputs
 
 
 
