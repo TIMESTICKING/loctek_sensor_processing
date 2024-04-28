@@ -20,7 +20,7 @@ FEATURE_DIM_SONIC = 24
 LABEL_NUM = 5
 BATCH = 5
 
-IR_DIM = 1
+SONIC_DIM = 1
 
 mydevice = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -60,7 +60,7 @@ class MLPFormula:
 
 
     def __call__(self, ir_encoded, distance_data):
-        distance_data = distance_data.view(-1, FRAME_DISTANCE*IR_DIM)
+        distance_data = distance_data.view(-1, FRAME_DISTANCE*SONIC_DIM)
         distance_encoded = (distance_data @ self.parameters['mlp2.0.weight'].T) + self.parameters['mlp2.0.bias']
         '''激活函数，max(res, 0)，其实可以在矩阵逐元素运算时完成'''
         distance_encoded = torch.relu(distance_encoded)
@@ -92,7 +92,7 @@ class MyMLP(nn.Module):
             # nn.ReLU()
         )
         self.mlp2 = nn.Sequential(
-            nn.Linear(FRAME_DISTANCE*IR_DIM, 16),
+            nn.Linear(FRAME_DISTANCE*SONIC_DIM, 16),
             nn.ReLU(),
             nn.Linear(16, FEATURE_DIM_SONIC),
             nn.ReLU(),
@@ -128,7 +128,7 @@ class MyMLP(nn.Module):
 
     def forward(self, ir_data, distance_data):
         ir_data = ir_data.view(-1, 64)
-        distance_data = distance_data.view(-1, FRAME_DISTANCE*IR_DIM)
+        distance_data = distance_data.view(-1, FRAME_DISTANCE*SONIC_DIM)
 
         ir_output = self.mlp1(ir_data)
         ir_output_per_batch = ir_output.view(-1, FRAME_IR*FEATURE_DIM_IR) # B x (9x4)
