@@ -574,10 +574,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     # SonicDataCollect数据传输
     def update_distance_display(self, distance):
-        if distance >= 37999.000:
-            self.ui.label_Sonic.setText("超声数据：" + " " * 28 + '-----')
-        else:
-            self.ui.label_Sonic.setText("超声数据：" + " " * 24 + '%9.3f' % distance)
+        # if distance >= 37999.000:
+        #     self.ui.label_Sonic.setText("超声数据：" + " " * 28 + '-----')
+        # else:
+        self.ui.label_Sonic.setText("超声数据：" + " " * 24 + '%9.3f' % distance)
 
     def cvMatToQImage(self, cvMat):
         if len(cvMat.shape) == 2:
