@@ -418,7 +418,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 print("检测设备串口:", self.com_device)
                 args = parser.parse_args()
                 SOCKET.SERVER_PORT = args.port
-                self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5])
+                self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5, 21])
                 self.myserial.start_report()
                 print("检测连接成功:")
                 # # 连接升降桌
@@ -574,7 +574,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     # SonicDataCollect数据传输
     def update_distance_display(self, distance):
-        # if distance >= 37999.000:
+        # if distance >= 199.000:
         #     self.ui.label_Sonic.setText("超声数据：" + " " * 28 + '-----')
         # else:
         self.ui.label_Sonic.setText("超声数据：" + " " * 24 + '%9.3f' % distance)

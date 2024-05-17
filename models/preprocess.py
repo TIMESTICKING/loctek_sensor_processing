@@ -28,7 +28,7 @@ def scale_IR(dataset):
 
 def nearest_neighbor_interpolate_and_analyze(arr, pos, mean_thresh_low=85, mean_thresh_high=100, var_thresh=45):
     # 找出不需要插值的索引和对应的值
-    valid_indices = np.where(arr != 38000)[0]
+    valid_indices = np.where(arr < 199)[0]
     valid_values = arr[valid_indices]
 
     # 创建最近邻插值函数
@@ -39,7 +39,7 @@ def nearest_neighbor_interpolate_and_analyze(arr, pos, mean_thresh_low=85, mean_
         return (True, 0)
     
     # 找出需要插值的索引
-    indices_to_interpolate = np.where(arr == 38000)[0]
+    indices_to_interpolate = np.where(arr >= 199)[0]
 
     # 进行插值
     if len(indices_to_interpolate) > 0:
