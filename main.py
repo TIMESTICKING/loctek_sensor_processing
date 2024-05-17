@@ -4,6 +4,8 @@ import cv2
 from comps.utils import *
 from comps.IRdataCollect import *
 from comps.SonicDataCollect import *
+from comps.LabelBoardCollect import *
+
 from argparse import ArgumentParser
 import sys
 from SerialTablePos import TableControl
@@ -27,6 +29,7 @@ os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'D:\\Environments\\Anaconda3\\envs\\
 
 class DEVICE:
     IR_data_collector = IRDataCollect()
+    board_collector = LabelBoardCollect()
     sonic_device1 = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
     predictor = InferenceTorch() if USE_TORCH else InferenceFormula() # MyInference()
 
@@ -93,7 +96,7 @@ class MySerial_2head1tail(MySerial):
     
     def start_report(self):
         time.sleep(2)
-        self.writeData("{'cmd':'SAC','debug': false ,'spit': true }")
+        self.writeData("{'cmd':'SAC','debug': false ,'spit': true , 'model': 1}")
 
 
     def message_classify(self):
@@ -105,6 +108,8 @@ class MySerial_2head1tail(MySerial):
                     MESSAGE.IR.put(*paras)
                 elif res[0] == TAG.SONIC1 and not MESSAGE.sonic1.full():
                     MESSAGE.sonic1.put(*paras)
+                elif res[0] == TAG.LABEL and not MESSAGE.label_board.full():
+                    MESSAGE.label_board.put(*paras)
             except Exception as e:
                 traceback.print_exc()
                 break
@@ -155,6 +160,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_start.clicked.connect(self.clickpushButton_start)
         # 新增人员
         self.ui.pushButton_addperson.clicked.connect(self.clickpushButton_add)
+
+        self.board_collector = LabelBoardCollect()
 
         # SonicDataCollect初始化与信号槽链接
         self.sonic_data_collector = SonicDataCollect(MESSAGE.sonic1, SOCKET.sonic1, 'sonic1')
@@ -433,7 +440,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.comboBox_Coms.setEnabled(0)
             self.ui.pushButton_show.setEnabled(0)
 
-            jobs = [self.myserial.message_classify, self.sonic_data_collector.play_sonic,
+            jobs = [self.myserial.message_classify, self.sonic_data_collector.play_sonic, self.board_collector.play, 
                     self.ir_data_collector.play_IR,
                     self.predictor_result.get_action]
             for job in jobs:

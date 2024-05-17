@@ -15,6 +15,9 @@ class MESSAGE:
     sonic1:Queue = Queue(5)
     scene_type = Queue(5)
 
+    label_board:Queue = Queue(5)
+
+
     IR_net_ready = collections.deque(maxlen=FRAME_IR)
     sonic_net_ready = collections.deque(maxlen=FRAME_DISTANCE)
 
@@ -73,6 +76,7 @@ class CONTROL:
 class TAG:
     SONIC1 = 0x02
     IR = 0x01
+    LABEL = 0x03
 
 
 
