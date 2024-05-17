@@ -96,7 +96,7 @@ class MySerial_2head1tail(MySerial):
     
     def start_report(self):
         time.sleep(2)
-        self.writeData("{'cmd':'SAC','debug': false ,'spit': true , 'model': 1}")
+        self.writeData("{'cmd':'SAC','debug': false ,'spit': true , 'model': 0}")
 
 
     def message_classify(self):
@@ -425,7 +425,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 print("检测设备串口:", self.com_device)
                 args = parser.parse_args()
                 SOCKET.SERVER_PORT = args.port
-                self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5, 21])
+                self.myserial = MySerial_2head1tail(b'\xFA', args.serial, b'\xAF', b'\xFF', length=[64 * 4 + 1, 5, 22])
                 self.myserial.start_report()
                 print("检测连接成功:")
                 # # 连接升降桌

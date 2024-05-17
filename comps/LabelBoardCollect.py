@@ -19,11 +19,12 @@ class LabelBoardCollect:
 
             # 将字节数组转换为浮点数列表
             try:
-                label = IR_byte_decoder(label_raw)
+                label_by_board = label_raw[0]
+                label = IR_byte_decoder(label_raw[1:])
 
                 ind = np.argmax(label)
 
-                print(ind)
+                print(label_by_board)
 
             except Exception as e:
                 traceback.print_exc()
