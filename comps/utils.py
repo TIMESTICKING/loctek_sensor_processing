@@ -1,3 +1,11 @@
+#
+# Author Jiabao Li
+#
+# Created on Mon May 27 2024
+#
+# Copyright (c) 2024 Loctek
+#
+
 import os
 from queue import Queue
 import pathlib as pl
