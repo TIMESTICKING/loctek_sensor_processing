@@ -286,7 +286,7 @@ def fix_sonic(dis: np.ndarray):
 
 
 def make_dataset():
-    datasets = load_preprocess(data_dir='../data_v2', pre_keywords='high-posi*')
+    datasets = load_preprocess(data_dir='../data', pre_keywords='low-posi*')
     # 准备训练集
     train_dataset, test_dataset = prepare_datasets(datasets, 0.8, 14, 9)
 
@@ -299,6 +299,19 @@ def make_dataset():
 
     return train_dataset, test_dataset
 
+def make_dataset_ex(type_str:str):
+    datasets = load_preprocess(data_dir='../data', pre_keywords=f'{type_str}-posi*')
+    # 准备训练集
+    train_dataset, test_dataset = prepare_datasets(datasets, 0.8, 14, 9)
+
+    # 打印结果以验证
+    print(f"Distance train dataset: {train_dataset[0].shape}")
+    print(f"IR train dataset: {train_dataset[1].shape}")
+    print(f"gt train dataset: {len(train_dataset[2])}")
+
+    print("test dataset has file amount: ", test_dataset[0].shape)
+
+    return train_dataset, test_dataset
 
 if __name__ == '__main__':
     make_dataset()

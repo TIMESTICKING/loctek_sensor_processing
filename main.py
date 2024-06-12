@@ -13,7 +13,7 @@ from PyQt5 import QtWidgets
 from ConnectDeviceDialog import ConnectDeviceDialog
 from serialShow import Ui_SerialShow
 from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QMessageBox, QInputDialog
+from PyQt5.QtWidgets import QMessageBox, QInputDialog   
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from draw_plot import DrawPlotWidget
@@ -23,8 +23,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FC
 from matplotlib import pyplot as plt
 import os
 
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'D:\\Environments\\Anaconda3\\envs\\pytorch_env\\Lib\\site-packages\\PyQt5\\Qt5\\plugins'
+# os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+# os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'D:\\Environments\\Anaconda3\\envs\\pytorch_env\\Lib\\site-packages\\PyQt5\\Qt5\\plugins'
 
 
 class DEVICE:
@@ -96,7 +96,7 @@ class MySerial_2head1tail(MySerial):
     
     def start_report(self):
         time.sleep(2)
-        self.writeData("{'cmd':'SAC','debug': false ,'spit': true , 'model': 0}")
+        self.writeData("{'cmd':'SAC','debug': false ,'spit': true , 'model': 0,'table_ctrl':false,'reconnect':false}")
 
 
     def message_classify(self):
@@ -194,9 +194,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         SCENETYPEPos = ['低位', '高位']
         SCENETYPEModes = \
             ['坐姿'
-                , '其他坐姿'
+              #  , '其他坐姿'
                 , '站姿'
-                , '其他站姿'
+              #  , '其他站姿'
                 , '坐姿到站姿'
                 , '站姿到坐姿'
                 , '无人']
@@ -455,7 +455,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
     # 新增人员
     def clickpushButton_add(self):
         print(self.size())
-        name, ok = QInputDialog.getText(self, '新增测试人员', '请输入您的名字:')
+        name, ok = QInputDialog.getText(self, '新增测试人员', '请输入您的.名字:')
         if ok:
             names = self.getnames('./persondata')
             if name in names:
@@ -525,6 +525,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
             save_path2 = "high-position-otherestand"
 
         trainroot = pl.Path('./data') / pl.Path('./' + save_path2)
+
+        os.makedirs(trainroot, exist_ok=True)
         return [1, filename, trainroot]
 
     # 开始记录
