@@ -1,8 +1,10 @@
 data/
+data_old/
 data_v2/
 data_eccentric/
 data_eccentric.zip
 data_eccentric/
+models/checkpoints
 data_eccentric_merged/
 data_v3/
 **/__pycache__/
