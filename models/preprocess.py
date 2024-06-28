@@ -299,10 +299,10 @@ def make_dataset():
 
     return train_dataset, test_dataset
 
-def make_dataset_ex(type_str:str):
+def make_dataset_ex(type_str:str,_ratio:float = 0.8):
     datasets = load_preprocess(data_dir='../data', pre_keywords=f'{type_str}-posi*')
     # 准备训练集
-    train_dataset, test_dataset = prepare_datasets(datasets, 0.8, 14, 9)
+    train_dataset, test_dataset = prepare_datasets(datasets, _ratio, 14, 9)
 
     # 打印结果以验证
     print(f"Distance train dataset: {train_dataset[0].shape}")
