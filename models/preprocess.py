@@ -20,10 +20,15 @@ data_version = 2
 # 转换为PyTorch张量并缩放数据
 def scale_IR(dataset):
     tensor = torch.tensor(dataset, dtype=torch.float32)
-    max_val = 35. # tensor.max()
-    min_val = 15. # tensor.min()
-    scaled_tensor = (tensor - min_val) / (max_val - min_val)
-    return scaled_tensor, max_val, min_val
+    # max_val = 35. # tensor.max()
+    # min_val = 15. # tensor.min()
+    # scaled_tensor = (tensor - min_val) / (max_val - min_val)
+    a_val = 0.2
+    b_val = 32.5
+    # 计算缩放后的张量
+    scaled_tensor = 1 / (1 + torch.exp(-a_val * (tensor - b_val)))
+
+    return scaled_tensor, a_val, b_val
 
 
 def nearest_neighbor_interpolate_and_analyze(arr, pos, mean_thresh_low=85, mean_thresh_high=100, var_thresh=45):
@@ -247,7 +252,7 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
 
     # data scale
     train_distance_tensor = torch.tensor(np.stack(sampled_distance_train_dataset, axis=0), dtype=torch.float32)
-    train_IR_tensor, max_IR, min_IR = scale_IR(np.stack(sampled_IR_train_dataset, axis=0))
+    train_IR_tensor, a_IR, b_IR = scale_IR(np.stack(sampled_IR_train_dataset, axis=0))
 
     train_dataset = (train_distance_tensor, train_IR_tensor, sampled_train_gt, [0] * len(sampled_train_gt))
 
