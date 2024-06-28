@@ -269,8 +269,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.comboBox_chooseposture.setCurrentIndex(current_mode + 1)
         elif keyevent.key() == Qt.Key.Key_Left and current_mode != 0:
             self.ui.comboBox_chooseposture.setCurrentIndex(current_mode - 1)
-        elif keyevent.key() == Qt.Key.Key_Up or keyevent.key() == Qt.Key.Key_Down:
-            self.ui.comboBox_chooseposition.setCurrentIndex(not self.ui.comboBox_chooseposition.currentIndex())
+
         else:
             pass
 
