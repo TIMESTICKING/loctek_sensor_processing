@@ -12,14 +12,20 @@ import glob
 from scipy.ndimage import minimum_filter
 import torch
 from scipy.interpolate import interp1d
-
+from scipy.ndimage import uniform_filter
 
 DATA_TYPE = 'all'
 data_version = 2
 
+def apply_ir_filter(matrix,window_size:int=10):
+    filtered_matrix = uniform_filter(matrix, size=window_size,mode='reflect')
+    # filtered_matrix = signal.medfilt(matrix,kernel_size=window_size)
+    return filtered_matrix
+
 # 转换为PyTorch张量并缩放数据
 def scale_IR(dataset):
     tensor = torch.tensor(dataset, dtype=torch.float32)
+
     # max_val = 35. # tensor.max()
     # min_val = 15. # tensor.min()
     # scaled_tensor = (tensor - min_val) / (max_val - min_val)
@@ -204,7 +210,7 @@ def _reverse_timeline(IR, distance, gt):
     return IR_re, distance_re, gt
 
 
-def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
+def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames,window_size_IR:int = 10):
     # set parameters
     SONIC_INTERVAL = 2
     IR_INTERVAL = 3
@@ -230,7 +236,7 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
         for offset in [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]:
             try:
                 sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, offset, SONIC_INTERVAL)
-                sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, offset, IR_INTERVAL)
+                sampled_IR_data = sample_frames_fix(fix_IR(IR_data,window_size_IR), num_IR_frames, offset, IR_INTERVAL)
             except Exception as e:
                 continue
             sampled_distance_train_dataset.append(sampled_distance_data)
@@ -266,7 +272,7 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
         distance_data, IR_data, gt_data, filename = datasets[0][i], datasets[1][i], datasets[2][i], datasets[3][i]
         try:
             sampled_distance_data = sample_frames_fix(fix_sonic(distance_data), num_distance_frames, 0, SONIC_INTERVAL)
-            sampled_IR_data = sample_frames_fix(fix_IR(IR_data), num_IR_frames, 0, IR_INTERVAL)
+            sampled_IR_data = sample_frames_fix(fix_IR(IR_data,window_size=window_size_IR), num_IR_frames, 0, IR_INTERVAL)
         except Exception as e:
             continue
         sampled_distance_test_dataset.append(sampled_distance_data)
@@ -283,8 +289,26 @@ def prepare_datasets(datasets, ratio, num_distance_frames, num_IR_frames):
     return train_dataset, test_dataset
 
 
-def fix_IR(IR: np.ndarray):
-    return IR.reshape(-1, 64)
+def fix_IR(IR: np.ndarray,window_size:int = 10):
+    if window_size <= 0:
+        return IR.reshape(-1, 64)
+    
+    elif window_size > 32:
+        window_size = 32
+
+    # print(f'!!!{IR.shape}')
+    filtered_data = np.zeros_like(IR)
+    # 均值滤波
+    for i in range(IR.shape[1]):
+        for j in range(IR.shape[2]):
+            # 提取当前格子的数据
+            grid_data = IR[:, i, j]
+            # 应用滤波器
+            filtered_grid = apply_ir_filter(grid_data)
+            # 存储结果
+            filtered_data[:, i, j] = filtered_grid
+
+    return filtered_data.reshape(-1, 64)
 
 def fix_sonic(dis: np.ndarray):
     return dis.T
@@ -304,10 +328,10 @@ def make_dataset():
 
     return train_dataset, test_dataset
 
-def make_dataset_ex(type_str:str,_ratio:float = 0.8):
+def make_dataset_ex(type_str:str,_ratio:float = 0.8,window_size_IR:int=10):
     datasets = load_preprocess(data_dir='../data', pre_keywords=f'{type_str}-posi*')
     # 准备训练集
-    train_dataset, test_dataset = prepare_datasets(datasets, _ratio, 14, 9)
+    train_dataset, test_dataset = prepare_datasets(datasets, _ratio, 14, 9,window_size_IR)
 
     # 打印结果以验证
     print(f"Distance train dataset: {train_dataset[0].shape}")
