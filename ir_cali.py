@@ -11,7 +11,7 @@ from comps.IRdataCollect import *
 from comps.SonicDataCollect import *
 from comps.LabelBoardCollect import *
 import threading
-
+import json
 class DEVICE:
     IR_data_collector = IRDataCollect()
     board_collector = LabelBoardCollect()
@@ -23,6 +23,8 @@ class IRCaliFifo:
         self._max_size = max_size
         self._raw = []
         self._averages = []
+        self._max = []
+        self._min = []
 
     def putFrame(self, frame:list):
         with self.t_k:
@@ -31,6 +33,7 @@ class IRCaliFifo:
                 self._averages.pop(0)
             self._raw.append(frame)
             self._averages.append(np.average(frame))
+            self._max.append()
 
     def length(self) -> int:
         with self.t_k:
@@ -42,17 +45,30 @@ class IRCaliFifo:
     
     def calc(self)->list:
         with self.t_k:
+            if len(self._averages) <= 0:
+                return [0.0,0.0,0.0]
             return [np.average(self._averages),np.max(self._averages),np.min(self._averages) ]
     
     def calcToalAvg(self) -> float:
         with self.t_k:
+            if len(self._averages) <= 0:
+                return 0.0
             return np.average(self._averages)
     def calcMaxAvg(self) -> float:
         with self.t_k:
+            if len(self._averages) <= 0:
+                return 0.0
             return np.max(self._averages)  
     def calcMinAvg(self) -> float:
+        with self.t_k:            
+            if len(self._averages) <= 0:
+                return 0.0
+            return np.min(self._averages) 
+        
+    def clear(self):
         with self.t_k:
-            return np.min(self._averages)  
+            self._raw.clear() 
+            self._averages.clear()
     
     def isFull(self) -> bool:
         with self.t_k:
@@ -110,6 +126,13 @@ class MySerial_2head1tail(MySerial):
         time.sleep(2)
         self.writeData("{'cmd':'SAC','debug': false ,'spit': true , 'model': 0,'table_ctrl':false,'reconnect':false}")
 
+    def set_cali(self,target_val:float = 0.0):
+        time.sleep(2)
+        target_dict = {}
+        target_dict['cmd'] = 'SAC'
+        target_dict['ir_cali'] = target_val
+        json_string = json.dumps(target_dict)
+        self.writeData(json_string)
 
     def message_classify(self):
         for res in self.readData():
@@ -128,15 +151,19 @@ class MySerial_2head1tail(MySerial):
                     # MESSAGE.IR.put(*paras)
                 # elif res[0] == TAG.SONIC1 and not MESSAGE.sonic1.full():
                 #     MESSAGE.sonic1.put(*paras)
-                # elif res[0] == TAG.LABEL and not MESSAGE.label_board.full():
+                # elif res[0] == 
+                #    AG.LABEL and not MESSAGE.label_board.full():
                 #     MESSAGE.label_board.put(*paras)
             except Exception as e:
                 traceback.print_exc()
                 break
 
 
-if __name__ == "__main__":
-    ir_fifo = IRCaliFifo(120)
+
+def main():
+    ir_cali_base = 29.2
+
+    ir_fifo = IRCaliFifo(60)
     myserial = MySerial_2head1tail(ir_fifo,b'\xFA',"COM12", b'\xAF', b'\xFF', length=[64 * 4 + 1, 5, 22])
     workThreadsList = []
     jobs = [myserial.message_classify]
@@ -148,13 +175,18 @@ if __name__ == "__main__":
 
     try:
         myserial.start_report()
+
+        myserial.set_cali(0.0)
+        sleep(2.0)
+        
         print("检测连接成功:")
         # # 连接升降桌
         # self.tableController.startCtrl(port=self.com_table)
         # print("升降桌连接成功:")
         # print("升降桌串口:", self.com_table)
     except Exception as e:
-        print("设备串口连接失败！")
+        print(f"设备串口连接失败！{e}")
+        return 0
 
     
     while not (ir_fifo.isFull()):
@@ -165,6 +197,24 @@ if __name__ == "__main__":
     v_avg,v_max,v_min = ir_fifo.calc()
     print(f'len:{ir_fifo.length()} avg:{v_avg} max:{v_max} min:{v_min}')
 
+    change_cali = ir_cali_base - v_avg
+    # myserial.set_cali(change_cali)
+    print(f"change_cali {change_cali}")
+    # sleep(2.0)
+    # myserial.clear_buf()
+    # ir_fifo.clear()
+    # sleep(0.5)
+
+    # while not (ir_fifo.isFull()):
+    #     v_avg,v_max,v_min = ir_fifo.calc()
+    #     print(f'af len:{ir_fifo.length()} avg:{v_avg} max:{v_max} min:{v_min}')
+    #     sleep(0.5)
+
+    # v_avg,v_max,v_min = ir_fifo.calc()
+    # print(f'result after cali avg:{v_avg} max:{v_max} min:{v_min} err:{ir_cali_base - v_avg}')
+    # print(f"change_cali {change_cali}")
 
     myserial.stop_thread()
         
+if __name__ == "__main__":
+    main()
